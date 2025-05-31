@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Обязательно для корректного масштабирования на мобильных устройствах -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Pilots Jump</title>
 
-  <!-- === CSS СТИЛИ === -->
+  <!-- =================== CSS СТИЛИ =================== -->
   <style>
-    /* 1) Сброс отступов */
+    /* ========== СБРОС ОТСТУПОВ ========== */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -21,27 +22,29 @@
       background: #f5f0e8;
     }
 
-    /* 2) Контейнер всей игры */
+    /* ========== КОНТЕЙНЕР ИГРЫ ========== */
     #gameContainer {
       position: relative;
-      margin: 0 auto;
+      width: 100vw;
+      height: 100vh;
       background: url(https://i.imgur.com/Y0BMP.png) top left;
       overflow: hidden;
     }
 
-    /* 3) Canvas: занимает 100% контейнера */
+    /* ========== CANVAS ========== */
     #canvas {
       display: block;
+      width: 100%;
+      height: 100%;
       background: transparent;
     }
 
-    /* 4) Скрываем тэг <img> со спрайтом */
+    /* Скрываем <img> со спрайтом */
     #sprite {
       display: none;
     }
 
-    /* === Элементы интерфейса === */
-    /* Главное меню «Play» */
+    /* ======= ГЛАВНОЕ МЕНЮ «PLAY» ======= */
     #mainMenu {
       position: absolute;
       top: 0;
@@ -60,11 +63,13 @@
       color: #5a5816;
       transform: rotate(-10deg);
       margin-bottom: 10px;
+      text-align: center;
     }
     #mainMenu h3 {
       font-size: 20px;
       color: #5e96be;
       margin-bottom: 30px;
+      text-align: center;
     }
     #btnPlay {
       width: 120px;
@@ -77,7 +82,7 @@
       cursor: pointer;
     }
 
-    /* Меню «Game Over» */
+    /* ======= МЕНЮ «GAME OVER» ======= */
     #gameOverMenu {
       position: absolute;
       top: 0;
@@ -96,11 +101,13 @@
       color: #a33;
       transform: rotate(-5deg);
       margin-bottom: 10px;
+      text-align: center;
     }
     #gameOverMenu h3 {
       font-size: 20px;
       color: #333;
       margin-bottom: 30px;
+      text-align: center;
     }
     #btnRestart {
       width: 120px;
@@ -113,7 +120,7 @@
       cursor: pointer;
     }
 
-    /* Счётчик очков */
+    /* ======= СЧЁТЧИК ОЧКОВ ======= */
     #scoreBoard {
       position: absolute;
       top: 10px;
@@ -129,7 +136,7 @@
       color: #000;
     }
 
-    /* Инструкция снизу */
+    /* ======= ИНСТРУКЦИЯ СНИЗУ ======= */
     #infoText {
       position: absolute;
       bottom: 10px;
@@ -138,9 +145,10 @@
       color: green;
       font-size: 14px;
       z-index: 5;
+      text-align: center;
     }
 
-    /* Невидимые зоны касания (левая/правая половины) */
+    /* ======= НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ ======= */
     #leftZone, #rightZone {
       position: absolute;
       top: 0;
@@ -158,44 +166,42 @@
   </style>
 </head>
 <body>
-  <!-- ===== Контейнер игры ===== -->
+  <!-- ===== КОНТЕЙНЕР ИГРЫ ===== -->
   <div id="gameContainer">
-    <!-- Canvas для рисования -->
+    <!-- Canvas для рисования игры -->
     <canvas id="canvas"></canvas>
 
-    <!-- Скрытый тэг <img> со спрайтом персонажа/платформ -->
+    <!-- Скрытый <img> со спрайтом -->
     <img id="sprite" src="https://i.imgur.com/2WEhF.png" alt="spritesheet" />
 
-    <!-- === Главное меню «Play» === -->
+    <!-- ===== ГЛАВНОЕ МЕНЮ «PLAY» ===== -->
     <div id="mainMenu">
       <h1>Pilots Jump</h1>
       <h3>Hey Pilot, ...by Second Pilots 3D</h3>
       <div id="btnPlay">Play</div>
     </div>
 
-    <!-- === Меню «Game Over» === -->
+    <!-- ===== МЕНЮ «GAME OVER» ===== -->
     <div id="gameOverMenu">
       <h1>Game Over!</h1>
       <h3 id="go_score">You scored 0 points</h3>
       <div id="btnRestart">Restart</div>
     </div>
 
-    <!-- Счётчик очков -->
+    <!-- ===== СЧЁТЧИК ОЧКОВ ===== -->
     <div id="scoreBoard">
       <p id="score">0</p>
     </div>
 
-    <!-- Инструкция снизу -->
+    <!-- ===== ИНСТРУКЦИЯ ===== -->
     <div id="infoText">use ← → to move and space to (re)start…</div>
 
-    <!-- Невидимые зоны касания для управления -->
+    <!-- ===== НЕВИДИМЫЕ ЗОНЫ КАСАНИЯ ===== -->
     <div id="leftZone"></div>
     <div id="rightZone"></div>
   </div>
 
-  <!-- === СТАРЫЙ <script> нужно удалить полностью! === -->
-
-  <!-- ==================== НОВЫЙ JS-КОД (обёрнут в <script>) ==================== -->
+  <!-- ================== JS-КОД (обёрнут в <script>) ================== -->
   <script>
     // 1) Работа с Canvas и контейнером
     const canvas = document.getElementById("canvas");
@@ -205,27 +211,24 @@
     function setCanvasSizeAndContainer() {
       const container = document.getElementById("gameContainer");
 
+      // Если запущено внутри Telegram.WebApp – учитываем navbarHeight
       if (typeof Telegram !== "undefined" && Telegram.WebApp) {
-        // Внутри WebApp: контейнер = 100vw × (100vh – navbarHeight)
         const navbarHeight =
           parseInt(
             getComputedStyle(document.documentElement).getPropertyValue(
               "--tg-nav-bar-height"
             )
           ) || 0;
-
         container.style.width = "100vw";
         container.style.height = `calc(100vh - ${navbarHeight}px)`;
         container.style.marginTop = `${navbarHeight}px`;
-
         width = container.clientWidth;
         height = container.clientHeight;
       } else {
-        // Локально: контейнер = 100vw × 100vh
+        // Локально – 100vw × 100vh
         container.style.width = "100vw";
         container.style.height = "100vh";
         container.style.marginTop = "0";
-
         width = container.clientWidth;
         height = container.clientHeight;
       }
@@ -324,14 +327,15 @@
         } catch (e) {}
       }
       jump() {
-        // Базовая сила прыжка + небольшое увеличение от счёта
-        const baseJump = 6;
-        const extra = Math.min(score * 0.0005, 4); // максимум +4
+        // Стартовый прыжок «реже» (6 → 4)
+        const baseJump = 4;
+        // Сила прыжка растёт с очками чуть быстрее
+        const extra = Math.min(score * 0.0007, 4.5); // максимум +4.5
         this.vy = -(baseJump + extra);
       }
       jumpHigh() {
         const baseHigh = 12;
-        const extraHigh = Math.min(score * 0.0007, 6); // максимум +6
+        const extraHigh = Math.min(score * 0.0009, 6.5); // максимум +6.5
         this.vy = -(baseHigh + extraHigh);
       }
     }
@@ -353,8 +357,7 @@
         if (score >= 5000) this.types = [2, 3, 3, 3, 4, 4, 4, 4];
         else if (score >= 2000 && score < 5000)
           this.types = [2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4];
-        else if (score >= 1000 && score < 2000)
-          this.types = [2, 2, 2, 3, 3, 3, 3, 3];
+        else if (score >= 1000 && score < 2000) this.types = [2, 2, 2, 3, 3, 3, 3, 3];
         else if (score >= 500 && score < 1000)
           this.types = [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3];
         else if (score >= 100 && score < 500) this.types = [1, 1, 1, 1, 2, 2];
@@ -504,7 +507,11 @@
       }
 
       // Game Over
-      if (base.y > height && (player.y + player.height) > height && player.isDead !== "lol") {
+      if (
+        base.y > height &&
+        player.y + player.height > height &&
+        player.isDead !== "lol"
+      ) {
         player.isDead = true;
       }
 
@@ -513,8 +520,8 @@
       else if (player.x < -player.width) player.x = width;
 
       // Вертикальная физика + скролл
-      if (player.y >= (height / 2) - (player.height / 2)) {
-        player.y +=	player.vy;
+      if (player.y >= height / 2 - player.height / 2) {
+        player.y += player.vy;
         player.vy += gravity;
       } else {
         platforms.forEach((p, i) => {
@@ -527,7 +534,7 @@
         base.y -= player.vy;
         player.vy += gravity;
         if (player.vy >= 0) {
-         	player.y += player.vy;
+          player.y += player.vy;
           player.vy += gravity;
         }
         score++;
@@ -588,7 +595,7 @@
             jumpCount = 0;
             return;
           } else if (p.type === 4 && p.state === 0) {
-           	player.jump();
+            player.jump();
             p.state = 1;
           } else if (p.flag === 1) {
             return;
@@ -643,7 +650,6 @@
     }
 
     // ========== ИНИЦИАЛИЗАЦИЯ ИГРЫ ==========
-
     function init() {
       jumpCount = 0;
       position = 0;
@@ -670,44 +676,50 @@
     }
 
     function reset() {
-     	hideGameOverMenu();
-     	showScore();
-     	player.isDead = false;
-     	flag = 0;
-     	position = 0;
-     	score = 0;
-     	jumpCount = 0;
+      hideGameOverMenu();
+      showScore();
+      player.isDead = false;
+      flag = 0;
+      position = 0;
+      score = 0;
+      jumpCount = 0;
 
-     	base = new Base();
-     	player = new Player();
-     	Spring = new SpringClass();
-     	platform_broken_substitute = new PlatformBrokenSub();
-     	platforms = [];
-     	for (let i = 0; i < platformCount; i++) {
-       	platforms.push(new Platform());
-     	}
+      base = new Base();
+      player = new Player();
+      Spring = new SpringClass();
+      platform_broken_substitute = new PlatformBrokenSub();
+      platforms = [];
+      for (let i = 0; i < platformCount; i++) {
+        platforms.push(new Platform());
+      }
     }
 
     function hideMainMenu() {
-     	document.getElementById("mainMenu").style.display = "none";
+      document.getElementById("mainMenu").style.display = "none";
     }
     function showGameOverMenu() {
-     	document.getElementById("gameOverMenu").style.display = "flex";
+      document.getElementById("gameOverMenu").style.display = "flex";
     }
     function hideGameOverMenu() {
-     	document.getElementById("gameOverMenu").style.display = "none";
+      document.getElementById("gameOverMenu").style.display = "none";
     }
     function showScore() {
-     	document.getElementById("scoreBoard").style.display = "flex";
+      document.getElementById("scoreBoard").style.display = "flex";
     }
     function hideScore() {
-     	document.getElementById("scoreBoard").style.display = "none";
+      document.getElementById("scoreBoard").style.display = "none";
     }
 
     // «Демо-цикл» до старта
     function menuLoop() {
-     	update();
-     	requestAnimationFrame(menuLoop);
+      paintCanvas();
+      platformCalc();
+      springCalc();
+      playerCalc();
+      player.draw();
+      base.draw();
+      updateScore();
+      requestAnimationFrame(menuLoop);
     }
     menuLoop();
 
@@ -717,48 +729,48 @@
 
     // ========== НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ ==========
     const leftZone = document.getElementById("leftZone");
-   	const rightZone = document.getElementById("rightZone");
+    const rightZone = document.getElementById("rightZone");
 
-   	leftZone.addEventListener("mousedown", () => {
-     	dir = "left";
-     	player.isMovingLeft = true;
-   	});
-   	leftZone.addEventListener("mouseup", () => {
-     	player.isMovingLeft = false;
-   	});
-   	leftZone.addEventListener("mouseleave", () => {
-     	player.isMovingLeft = false;
-   	});
-   	leftZone.addEventListener("touchstart", (e) => {
-     	e.preventDefault();
-     	dir = "left";
-     	player.isMovingLeft = true;
-   	});
-   	leftZone.addEventListener("touchend", (e) => {
-     	e.preventDefault();
-     	player.isMovingLeft = false;
-   	});  
+    leftZone.addEventListener("mousedown", () => {
+      dir = "left";
+      player.isMovingLeft = true;
+    });
+    leftZone.addEventListener("mouseup", () => {
+      player.isMovingLeft = false;
+    });
+    leftZone.addEventListener("mouseleave", () => {
+      player.isMovingLeft = false;
+    });
+    leftZone.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dir = "left";
+      player.isMovingLeft = true;
+    });
+    leftZone.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      player.isMovingLeft = false;
+    });
 
-   	rightZone.addEventListener("mousedown", () => {
-     	dir = "right";
-     	player.isMovingRight = true;
-   	});
-   	rightZone.addEventListener("mouseup", () => {
-     	player.isMovingRight = false;
-   	});
-   	rightZone.addEventListener("mouseleave", () => {
-     	player.isMovingRight = false;
-   	});
-   	rightZone.addEventListener("touchstart", (e) => {
-     	e.preventDefault();
-     	dir = "right";
-     	player.isMovingRight = true;
-   	});
-   	rightZone.addEventListener("touchend", (e) => {
-     	e.preventDefault();
-     	player.isMovingRight = false;
-   	});
+    rightZone.addEventListener("mousedown", () => {
+      dir = "right";
+      player.isMovingRight = true;
+    });
+    rightZone.addEventListener("mouseup", () => {
+      player.isMovingRight = false;
+    });
+    rightZone.addEventListener("mouseleave", () => {
+      player.isMovingRight = false;
+    });
+    rightZone.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dir = "right";
+      player.isMovingRight = true;
+    });
+    rightZone.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      player.isMovingRight = false;
+    });
   </script>
-  <!-- ==================== КОНЕЦ JS-КОДА ==================== -->
+  <!-- ================== КОНЕЦ JS-КОДА ================== -->
 </body>
 </html>
