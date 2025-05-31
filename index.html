@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Обязательно для корректного масштабирования на мобильных устройствах -->
+  <!-- Для корректного масштабирования на мобильных устройствах -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Pilots Jump</title>
 
@@ -159,7 +159,7 @@
     #leftZone { left: 0; }
     #rightZone { right: 0; }
 
-    /* Для временной отладки можно раскомментировать:
+    /* Для отладки можно временно показать зоны:
     #leftZone { background: rgba(255, 0, 0, 0.1); }
     #rightZone { background: rgba(0, 0, 255, 0.1); }
     */
@@ -201,8 +201,9 @@
     <div id="rightZone"></div>
   </div>
 
-  <!-- ================== JS-КОД (обёрнут в <script>) ================== -->
+  <!-- ================== JS-КОД ================== -->
   <script>
+    // ——————————————————————————————————————————————————
     // 1) Работа с Canvas и контейнером
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -211,7 +212,7 @@
     function setCanvasSizeAndContainer() {
       const container = document.getElementById("gameContainer");
 
-      // Если запущено внутри Telegram.WebApp – учитываем navbarHeight
+      // Если внутри Telegram.WebApp, учтём navbarHeight
       if (typeof Telegram !== "undefined" && Telegram.WebApp) {
         const navbarHeight =
           parseInt(
@@ -244,46 +245,38 @@
       Telegram.WebApp.ready();
     }
 
+    // ——————————————————————————————————————————————————
     // 2) Игровые переменные и инициализация
     let platforms = [];
     const image = document.getElementById("sprite");
     let player, base, Spring, platform_broken_substitute;
 
     const platformCount = 10;
-    let position = 0,
-      gravity = 0.2,
-      animloop,
-      flag = 0,
-      broken = 0,
-      dir = "left",
-      score = 0,
-      firstRun = true,
-      jumpCount = 0;
+    let position = 0,       // меняем внутри init()
+        gravity = 0.2,
+        animloop,
+        flag = 0,
+        broken = 0,
+        dir = "left",
+        score = 0,
+        firstRun = true,
+        jumpCount = 0;
 
     // ==================== КЛАССЫ ====================
     class Base {
       constructor() {
         this.height = 5;
         this.width = width;
-        this.cx = 0;
-        this.cy = 614;
-        this.cwidth = 100;
-        this.cheight = 5;
-        this.x = 0;
-        this.y = height - this.height;
+        this.cx = 0;      this.cy = 614;
+        this.cwidth = 100; this.cheight = 5;
+        this.x = 0;       this.y = height - this.height;
       }
       draw() {
         try {
           ctx.drawImage(
             image,
-            this.cx,
-            this.cy,
-            this.cwidth,
-            this.cheight,
-            this.x,
-            this.y,
-            this.width,
-            this.height
+            this.cx, this.cy, this.cwidth, this.cheight,
+            this.x, this.y, this.width, this.height
           );
         } catch (e) {}
       }
@@ -298,10 +291,8 @@
         this.isDead = false;
         this.width = 55;
         this.height = 40;
-        this.cx = 0;
-        this.cy = 0;
-        this.cwidth = 110;
-        this.cheight = 80;
+        this.cx = 0;      this.cy = 0;
+        this.cwidth = 110; this.cheight = 80;
         this.dir = "left";
         this.x = width / 2 - this.width / 2;
         this.y = height;
@@ -315,44 +306,39 @@
 
           ctx.drawImage(
             image,
-            this.cx,
-            this.cy,
-            this.cwidth,
-            this.cheight,
-            this.x,
-            this.y,
-            this.width,
-            this.height
+            this.cx, this.cy, this.cwidth, this.cheight,
+            this.x, this.y, this.width, this.height
           );
         } catch (e) {}
       }
       jump() {
-        // Стартовый прыжок «реже» (6 → 4)
-        const baseJump = 4;
-        // Сила прыжка растёт с очками чуть быстрее
-        const extra = Math.min(score * 0.0007, 4.5); // максимум +4.5
+        // Прыжок в 3× выше: вместо 4 → 12
+        const baseJump = 12;
+        // Прирост с очками (макс +4.5)
+        const extra = Math.min(score * 0.0007, 4.5);
         this.vy = -(baseJump + extra);
       }
       jumpHigh() {
-        const baseHigh = 12;
-        const extraHigh = Math.min(score * 0.0009, 6.5); // максимум +6.5
+        // Высокий прыжок: 12×3 = 36
+        const baseHigh = 36;
+        const extraHigh = Math.min(score * 0.0009, 6.5);
         this.vy = -(baseHigh + extraHigh);
       }
     }
 
     class Platform {
       constructor() {
-        this.width = 70;
+        // Шире: платформа 100px (было 70px)
+        this.width = 100;
         this.height = 17;
         this.x = Math.random() * (width - this.width);
         this.y = position;
-        position += height / platformCount;
+        // Платформы ближе: height/20 (вместо height/15)
+        position += height / 20;
         this.flag = 0;
         this.state = 0;
-        this.cx = 0;
-        this.cy = 0;
-        this.cwidth = 105;
-        this.cheight = 31;
+        this.cx = 0;      this.cy = 0;
+        this.cwidth = 105; this.cheight = 31;
 
         if (score >= 5000) this.types = [2, 3, 3, 3, 4, 4, 4, 4];
         else if (score >= 2000 && score < 5000)
@@ -384,14 +370,8 @@
 
           ctx.drawImage(
             image,
-            this.cx,
-            this.cy,
-            this.cwidth,
-            this.cheight,
-            this.x,
-            this.y,
-            this.width,
-            this.height
+            this.cx, this.cy, this.cwidth, this.cheight,
+            this.x, this.y, this.width, this.height
           );
         } catch (e) {}
       }
@@ -400,13 +380,11 @@
     class PlatformBrokenSub {
       constructor() {
         this.height = 30;
-        this.width = 70;
+        this.width = 100; // подогнано под ширину обычной платформы
         this.x = 0;
         this.y = 0;
-        this.cx = 0;
-        this.cy = 554;
-        this.cwidth = 105;
-        this.cheight = 60;
+        this.cx = 0;      this.cy = 554;
+        this.cwidth = 105; this.cheight = 60;
         this.appearance = false;
       }
       draw() {
@@ -414,14 +392,8 @@
           if (this.appearance) {
             ctx.drawImage(
               image,
-              this.cx,
-              this.cy,
-              this.cwidth,
-              this.cheight,
-              this.x,
-              this.y,
-              this.width,
-              this.height
+              this.cx, this.cy, this.cwidth, this.cheight,
+              this.x, this.y, this.width, this.height
             );
           }
         } catch (e) {}
@@ -434,10 +406,8 @@
         this.y = 0;
         this.width = 26;
         this.height = 30;
-        this.cx = 0;
-        this.cy = 0;
-        this.cwidth = 45;
-        this.cheight = 53;
+        this.cx = 0;      this.cy = 0;
+        this.cwidth = 45; this.cheight = 53;
         this.state = 0;
       }
       draw() {
@@ -446,30 +416,14 @@
           else if (this.state === 1) this.cy = 501;
           ctx.drawImage(
             image,
-            this.cx,
-            this.cy,
-            this.cwidth,
-            this.cheight,
-            this.x,
-            this.y,
-            this.width,
-            this.height
+            this.cx, this.cy, this.cwidth, this.cheight,
+            this.x, this.y, this.width, this.height
           );
         } catch (e) {}
       }
     }
 
-    // Инициализация объектов до старта
-    base = new Base();
-    player = new Player();
-    Spring = new SpringClass();
-    platform_broken_substitute = new PlatformBrokenSub();
-    platforms = [];
-    for (let i = 0; i < platformCount; i++) {
-      platforms.push(new Platform());
-    }
-
-    // ==================== ФУНКЦИИ ОБНОВЛЕНИЯ ====================
+    // ==================== ФУНКЦИИ ====================
     function paintCanvas() {
       ctx.clearRect(0, 0, width, height);
     }
@@ -483,7 +437,7 @@
         if (player.vy < -7 && player.vy > -15) player.dir = "right_land";
       }
 
-      // Горизонтальная физика («мягче»)
+      // Горизонтальная физика (меньше чувствительность)
       if (player.isMovingLeft) {
         player.x += player.vx;
         player.vx -= 0.08;
@@ -652,7 +606,8 @@
     // ========== ИНИЦИАЛИЗАЦИЯ ИГРЫ ==========
     function init() {
       jumpCount = 0;
-      position = 0;
+      // «Опустить» платформы на треть экрана:
+      position = height / 3;
       score = 0;
       flag = 0;
 
@@ -671,6 +626,7 @@
         requestAnimationFrame(animloop);
       };
       animloop();
+
       hideMainMenu();
       showScore();
     }
@@ -680,7 +636,8 @@
       showScore();
       player.isDead = false;
       flag = 0;
-      position = 0;
+      // Снова «опустить» платформы
+      position = height / 3;
       score = 0;
       jumpCount = 0;
 
@@ -710,18 +667,9 @@
       document.getElementById("scoreBoard").style.display = "none";
     }
 
-    // «Демо-цикл» до старта
-    function menuLoop() {
-      paintCanvas();
-      platformCalc();
-      springCalc();
-      playerCalc();
-      player.draw();
-      base.draw();
-      updateScore();
-      requestAnimationFrame(menuLoop);
-    }
-    menuLoop();
+    // Убираем «демо-цикл» – всё рисование до первого клика Play:
+    // (раньше: menuLoop)
+    // — просто оставляем статичный экран главного меню.
 
     // ========== ОБРАБОТЧИКИ КНОПОК ==========
     document.getElementById("btnPlay").addEventListener("click", init);
