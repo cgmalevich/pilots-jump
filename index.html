@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Для корректного масштабирования на мобильных устройствах -->
+  <!-- Для корректного масштабирования на мобильных -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Pilots Jump</title>
 
@@ -80,6 +80,7 @@
       font-size: 16px;
       color: #000;
       cursor: pointer;
+      margin-top: 20px;
     }
 
     /* ======= МЕНЮ «GAME OVER» ======= */
@@ -118,6 +119,7 @@
       font-size: 16px;
       color: #000;
       cursor: pointer;
+      margin-top: 20px;
     }
 
     /* ======= СЧЁТЧИК ОЧКОВ ======= */
@@ -158,17 +160,12 @@
     }
     #leftZone { left: 0; }
     #rightZone { right: 0; }
-
-    /* Для отладки можно временно показать зоны:
-    #leftZone { background: rgba(255, 0, 0, 0.1); }
-    #rightZone { background: rgba(0, 0, 255, 0.1); }
-    */
   </style>
 </head>
 <body>
   <!-- ===== КОНТЕЙНЕР ИГРЫ ===== -->
   <div id="gameContainer">
-    <!-- Canvas для рисования игры -->
+    <!-- Canvas для рисования -->
     <canvas id="canvas"></canvas>
 
     <!-- Скрытый <img> со спрайтом -->
@@ -203,7 +200,6 @@
 
   <!-- ================== JS-КОД ================== -->
   <script>
-    // ——————————————————————————————————————————————————
     // 1) Работа с Canvas и контейнером
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -211,8 +207,6 @@
 
     function setCanvasSizeAndContainer() {
       const container = document.getElementById("gameContainer");
-
-      // Если внутри Telegram.WebApp, учтём navbarHeight
       if (typeof Telegram !== "undefined" && Telegram.WebApp) {
         const navbarHeight =
           parseInt(
@@ -226,7 +220,6 @@
         width = container.clientWidth;
         height = container.clientHeight;
       } else {
-        // Локально – 100vw × 100vh
         container.style.width = "100vw";
         container.style.height = "100vh";
         container.style.marginTop = "0";
@@ -245,21 +238,19 @@
       Telegram.WebApp.ready();
     }
 
-    // ——————————————————————————————————————————————————
     // 2) Игровые переменные и инициализация
     let platforms = [];
     const image = document.getElementById("sprite");
     let player, base, Spring, platform_broken_substitute;
 
     const platformCount = 10;
-    let position = 0,       // меняем внутри init()
+    let position = 0,
         gravity = 0.2,
         animloop,
         flag = 0,
         broken = 0,
         dir = "left",
         score = 0,
-        firstRun = true,
         jumpCount = 0;
 
     // ==================== КЛАССЫ ====================
@@ -284,7 +275,7 @@
 
     class Player {
       constructor() {
-        this.vy = 11;
+        this.vy = 11;       // стартовая вертик. скорость
         this.vx = 0;
         this.isMovingLeft = false;
         this.isMovingRight = false;
@@ -312,15 +303,14 @@
         } catch (e) {}
       }
       jump() {
-        // Прыжок в 3× выше: вместо 4 → 12
-        const baseJump = 12;
-        // Прирост с очками (макс +4.5)
+        // Прыжок уменьшён в 3×: baseJump = 8
+        const baseJump = 8;
         const extra = Math.min(score * 0.0007, 4.5);
         this.vy = -(baseJump + extra);
       }
       jumpHigh() {
-        // Высокий прыжок: 12×3 = 36
-        const baseHigh = 36;
+        // Высокий прыжок уменьшён в 3×: baseHigh = 24
+        const baseHigh = 24;
         const extraHigh = Math.min(score * 0.0009, 6.5);
         this.vy = -(baseHigh + extraHigh);
       }
@@ -328,13 +318,13 @@
 
     class Platform {
       constructor() {
-        // Шире: платформа 100px (было 70px)
+        // Шире: 100px (вместо 70px)
         this.width = 100;
         this.height = 17;
         this.x = Math.random() * (width - this.width);
         this.y = position;
-        // Платформы ближе: height/20 (вместо height/15)
-        position += height / 20;
+        // Оригинальный шаг между платформами:
+        position += height / platformCount;
         this.flag = 0;
         this.state = 0;
         this.cx = 0;      this.cy = 0;
@@ -380,7 +370,7 @@
     class PlatformBrokenSub {
       constructor() {
         this.height = 30;
-        this.width = 100; // подогнано под ширину обычной платформы
+        this.width = 100;
         this.x = 0;
         this.y = 0;
         this.cx = 0;      this.cy = 554;
@@ -437,21 +427,11 @@
         if (player.vy < -7 && player.vy > -15) player.dir = "right_land";
       }
 
-      // Горизонтальная физика (меньше чувствительность)
-      if (player.isMovingLeft) {
-        player.x += player.vx;
-        player.vx -= 0.08;
-      } else {
-        player.x += player.vx;
-        if (player.vx < 0) player.vx += 0.05;
-      }
-      if (player.isMovingRight) {
-        player.x += player.vx;
-        player.vx += 0.08;
-      } else {
-        player.x += player.vx;
-        if (player.vx > 0) player.vx -= 0.05;
-      }
+      // Горизонтальная физика (уменьшенная чувствительность)
+      if (player.isMovingLeft) { player.x += player.vx; player.vx -= 0.08; }
+      else { player.x += player.vx; if (player.vx < 0) player.vx += 0.05; }
+      if (player.isMovingRight) { player.x += player.vx; player.vx += 0.08; }
+      else { player.x += player.vx; if (player.vx > 0) player.vx -= 0.05; }
       if (player.vx > 8) player.vx = 8;
       else if (player.vx < -8) player.vx = -8;
 
@@ -606,7 +586,7 @@
     // ========== ИНИЦИАЛИЗАЦИЯ ИГРЫ ==========
     function init() {
       jumpCount = 0;
-      // «Опустить» платформы на треть экрана:
+      // «Опустить» платформы на треть экрана
       position = height / 3;
       score = 0;
       flag = 0;
@@ -614,6 +594,7 @@
       base = new Base();
       player = new Player();
       Spring = new SpringClass();
+      // Здесь исправлено имя конструктора
       platform_broken_substitute = new PlatformBrokenSub();
       platforms = [];
       for (let i = 0; i < platformCount; i++) {
@@ -667,9 +648,7 @@
       document.getElementById("scoreBoard").style.display = "none";
     }
 
-    // Убираем «демо-цикл» – всё рисование до первого клика Play:
-    // (раньше: menuLoop)
-    // — просто оставляем статичный экран главного меню.
+    // Убираем «демо-цикл» до старта
 
     // ========== ОБРАБОТЧИКИ КНОПОК ==========
     document.getElementById("btnPlay").addEventListener("click", init);
