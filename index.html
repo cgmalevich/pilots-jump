@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Для корректного масштабирования на мобильных -->
+  <!-- Поддержка масштабирования на мобильных устройствах -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Pilots Jump</title>
 
   <!-- =================== CSS СТИЛИ =================== -->
   <style>
-    /* ========== СБРОС ОТСТУПОВ ========== */
+    /* Сброс отступов */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -22,7 +22,7 @@
       background: #f5f0e8;
     }
 
-    /* ========== КОНТЕЙНЕР ИГРЫ ========== */
+    /* Контейнер всей игры */
     #gameContainer {
       position: relative;
       width: 100vw;
@@ -31,7 +31,7 @@
       overflow: hidden;
     }
 
-    /* ========== CANVAS ========== */
+    /* Canvas для рисования */
     #canvas {
       display: block;
       width: 100%;
@@ -44,7 +44,7 @@
       display: none;
     }
 
-    /* ======= ГЛАВНОЕ МЕНЮ «PLAY» ======= */
+    /* ----- ГЛАВНОЕ МЕНЮ «PLAY» ----- */
     #mainMenu {
       position: absolute;
       top: 0;
@@ -83,7 +83,7 @@
       margin-top: 20px;
     }
 
-    /* ======= МЕНЮ «GAME OVER» ======= */
+    /* ----- МЕНЮ «GAME OVER» ----- */
     #gameOverMenu {
       position: absolute;
       top: 0;
@@ -91,10 +91,11 @@
       width: 100%;
       height: 100%;
       background: rgba(255,255,255,0.9);
-      display: none;
+      display: none;               /* скрыто по умолчанию */
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start; /* немного вниз, чтобы не закрывать заголовок */
       align-items: center;
+      padding-top: 40px;
       z-index: 10;
     }
     #gameOverMenu h1 {
@@ -107,7 +108,7 @@
     #gameOverMenu h3 {
       font-size: 20px;
       color: #333;
-      margin-bottom: 30px;
+      margin-bottom: 10px;
       text-align: center;
     }
     #btnRestart {
@@ -119,10 +120,10 @@
       font-size: 16px;
       color: #000;
       cursor: pointer;
-      margin-top: 20px;
+      margin-bottom: 20px;
     }
 
-    /* ======= СЧЁТЧИК ОЧКОВ ======= */
+    /* ----- СЧЁТЧИК ОЧКОВ ----- */
     #scoreBoard {
       position: absolute;
       top: 10px;
@@ -130,7 +131,7 @@
       background: rgba(182,200,220,0.7);
       padding: 5px 10px;
       border-radius: 5px;
-      display: none;
+      display: none;  /* показываем, когда игра началась */
       z-index: 5;
     }
     #scoreBoard p {
@@ -138,7 +139,7 @@
       color: #000;
     }
 
-    /* ======= ИНСТРУКЦИЯ СНИЗУ ======= */
+    /* ----- ИНСТРУКЦИЯ СНИЗУ ----- */
     #infoText {
       position: absolute;
       bottom: 10px;
@@ -150,7 +151,7 @@
       text-align: center;
     }
 
-    /* ======= НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ ======= */
+    /* ----- НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ (касаемся левой/правой половины) ----- */
     #leftZone, #rightZone {
       position: absolute;
       top: 0;
@@ -160,6 +161,45 @@
     }
     #leftZone { left: 0; }
     #rightZone { right: 0; }
+
+    /* ----- ТАБЛИЦА ЛИДЕРОВ ----- */
+    #leaderboard {
+      width: 90%;
+      max-width: 350px;
+      margin-top: 20px;
+      border: 2px solid #5a5816;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      display: none;  /* показываем только после Game Over */
+    }
+    #leaderboard h4 {
+      background: #5a5816;
+      color: #fff;
+      padding: 6px 0;
+      text-align: center;
+      font-size: 18px;
+      margin: 0;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+    #leaderboard table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #leaderboard th, #leaderboard td {
+      padding: 6px 4px;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid #ddd;
+    }
+    #leaderboard th {
+      background: #e8e8e8;
+      font-weight: bold;
+    }
+    #leaderboard tr:last-child td {
+      border-bottom: none;
+    }
   </style>
 </head>
 <body>
@@ -183,6 +223,23 @@
       <h1>Game Over!</h1>
       <h3 id="go_score">You scored 0 points</h3>
       <div id="btnRestart">Restart</div>
+
+      <!-- Блок с таблицей лидеров (Leaderboard) -->
+      <div id="leaderboard">
+        <h4>Leaderboard</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Best Score</th>
+            </tr>
+          </thead>
+          <tbody id="lb_body">
+            <!-- сюда динамически добавятся строки топ-10 -->
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ===== СЧЁТЧИК ОЧКОВ ===== -->
@@ -210,9 +267,8 @@
       if (typeof Telegram !== "undefined" && Telegram.WebApp) {
         const navbarHeight =
           parseInt(
-            getComputedStyle(document.documentElement).getPropertyValue(
-              "--tg-nav-bar-height"
-            )
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--tg-nav-bar-height")
           ) || 0;
         container.style.width = "100vw";
         container.style.height = `calc(100vh - ${navbarHeight}px)`;
@@ -226,7 +282,6 @@
         width = container.clientWidth;
         height = container.clientHeight;
       }
-
       canvas.width = width;
       canvas.height = height;
     }
@@ -275,7 +330,7 @@
 
     class Player {
       constructor() {
-        this.vy = 11;       // стартовая вертик. скорость
+        this.vy = 11;       // стартовая вертикальная скорость
         this.vx = 0;
         this.isMovingLeft = false;
         this.isMovingRight = false;
@@ -303,16 +358,12 @@
         } catch (e) {}
       }
       jump() {
-        // Прыжок уменьшён в 3×: baseJump = 8
-        const baseJump = 8;
-        const extra = Math.min(score * 0.0007, 4.5);
-        this.vy = -(baseJump + extra);
+        // ВОССТАНОВЛЕНО к оригиналу: -8
+        this.vy = -8;
       }
       jumpHigh() {
-        // Высокий прыжок уменьшён в 3×: baseHigh = 24
-        const baseHigh = 24;
-        const extraHigh = Math.min(score * 0.0009, 6.5);
-        this.vy = -(baseHigh + extraHigh);
+        // ВОССТАНОВЛЕНО к оригиналу: -16
+        this.vy = -16;
       }
     }
 
@@ -323,7 +374,7 @@
         this.height = 17;
         this.x = Math.random() * (width - this.width);
         this.y = position;
-        // Оригинальный шаг между платформами:
+        // «Оригинальный» шаг между платформами:
         position += height / platformCount;
         this.flag = 0;
         this.state = 0;
@@ -475,7 +526,9 @@
       }
 
       collides();
-      if (player.isDead) gameOver();
+      if (player.isDead) {
+        gameOver();
+      }
     }
 
     function springCalc() {
@@ -511,7 +564,7 @@
         subs.draw();
         subs.y += 8;
       }
-      if (subs.y > height) subs.appearance = false;
+      if (subs.y > height) subs.appearance = false;      
     }
 
     function collides() {
@@ -557,7 +610,77 @@
       document.getElementById("score").innerText = score;
     }
 
-    function gameOver() {
+    // Функция отправки результата на сервер
+    async function submitScoreToServer(userId, scoreValue) {
+      try {
+        const response = await fetch("https://ваш_сервер/api/submit_score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            score: scoreValue
+          })
+        });
+        const data = await response.json();
+        return data; // { success: true/false, personal_best: <число> }
+      } catch (err) {
+        console.error("Error submitting score:", err);
+        return null;
+      }
+    }
+
+    // Функция для получения топ-10
+    async function fetchTop10() {
+      try {
+        const response = await fetch("https://ваш_сервер/api/top10");
+        const data = await response.json();
+        return data.top10; // массив объектов { username, best_score }
+      } catch (err) {
+        console.error("Error fetching top10:", err);
+        return [];
+      }
+    }
+
+    // Покажем таблицу лидеров после Game Over
+    async function showLeaderboard(userId, finalScore) {
+      const lbDiv = document.getElementById("leaderboard");
+      const lbBody = document.getElementById("lb_body");
+
+      // 1) Отправляем свой счёт на сервер
+      const submitResult = await submitScoreToServer(userId, finalScore);
+      if (!submitResult) {
+        console.warn("Не удалось отправить счёт, получаем только топ-10.");
+      }
+
+      // 2) Получаем топ-10
+      const topList = await fetchTop10();
+
+      // 3) Очищаем предыдущие строки
+      lbBody.innerHTML = "";
+
+      // 4) Пишем топ-10
+      for (let i = 0; i < topList.length; i++) {
+        const row = document.createElement("tr");
+        const cellRank = document.createElement("td");
+        const cellName = document.createElement("td");
+        const cellScore = document.createElement("td");
+
+        cellRank.innerText = i + 1;
+        cellName.innerText = topList[i].username;
+        cellScore.innerText = topList[i].best_score;
+
+        row.appendChild(cellRank);
+        row.appendChild(cellName);
+        row.appendChild(cellScore);
+        lbBody.appendChild(row);
+      }
+
+      // 5) Показываем
+      lbDiv.style.display = "block";
+    }
+
+    // Game Over с вызовом Leaderboard
+    async function gameOver() {
       platforms.forEach((p) => {
         p.y -= 12;
       });
@@ -569,6 +692,16 @@
       } else if (player.y + player.height > height) {
         showGameOverMenu();
         hideScore();
+
+        // Берём user_id из Telegram WebApp; если нет — 0
+        let userId = null;
+        if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+          const initData = Telegram.WebApp.initDataUnsafe || {};
+          userId = initData.user ? initData.user.id : null;
+        }
+        userId = userId || 0;
+        await showLeaderboard(userId, score);
+
         player.isDead = "lol";
       }
     }
@@ -583,23 +716,27 @@
       updateScore();
     }
 
-    // ========== ИНИЦИАЛИЗАЦИЯ ИГРЫ ==========
+    // ===== ИНИЦИАЛИЗАЦИЯ ИГРЫ =====
     function init() {
       jumpCount = 0;
       // «Опустить» платформы на треть экрана
       position = height / 3;
       score = 0;
       flag = 0;
+      broken = 0;
 
       base = new Base();
       player = new Player();
       Spring = new SpringClass();
-      // Здесь исправлено имя конструктора
       platform_broken_substitute = new PlatformBrokenSub();
       platforms = [];
       for (let i = 0; i < platformCount; i++) {
         platforms.push(new Platform());
       }
+
+      // Скрываем GameOverMenu и Leaderboard
+      hideGameOverMenu();
+      document.getElementById("leaderboard").style.display = "none";
 
       paintCanvas();
       animloop = function () {
@@ -614,9 +751,11 @@
 
     function reset() {
       hideGameOverMenu();
+      document.getElementById("leaderboard").style.display = "none";
       showScore();
       player.isDead = false;
       flag = 0;
+      broken = 0;
       // Снова «опустить» платформы
       position = height / 3;
       score = 0;
@@ -648,13 +787,11 @@
       document.getElementById("scoreBoard").style.display = "none";
     }
 
-    // Убираем «демо-цикл» до старта
-
-    // ========== ОБРАБОТЧИКИ КНОПОК ==========
+    // ===== ОБРАБОТЧИКИ ==========
     document.getElementById("btnPlay").addEventListener("click", init);
     document.getElementById("btnRestart").addEventListener("click", reset);
 
-    // ========== НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ ==========
+    // ===== НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ ======
     const leftZone = document.getElementById("leftZone");
     const rightZone = document.getElementById("rightZone");
 
