@@ -1,16 +1,22 @@
 <!DOCTYPE HTML>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Pilots Jump — Исправленная версия</title>
+  <meta charset="UTF-8" />
+  <title>Pilots Jump — WebApp</title>
 
-  <!-- Telegram Web App SDK (не вызовет ошибок, если запущено локально) -->
+  <!-- 1. Загружаем SDK Telegram.WebApp, создаём «пустышку», если не в WebView -->
+  <script>
+    window.Telegram = window.Telegram || { WebApp: null };
+  </script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
 
   <style>
-    /* ======= Сбросы ======= */
+    /* ========== ОБЩИЕ СБРОСЫ ========== */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -20,44 +26,46 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #ffffff;
+      background: #fdf7ec;
+      font-family: "Gloria Hallelujah", cursive;
     }
     button {
       user-select: none;
+      cursor: pointer;
     }
 
-    /* ======= Контейнер игры ======= */
+    /* ========== КОНТЕЙНЕР ИГРЫ ========== */
     .container {
       position: relative;
       margin: 0 auto;
-      background: #fdf7ec; /* светлый фон */
+      background: #fdf7ec;
       overflow: hidden;
-
-      /* По умолчанию локально фиксированные размеры 422×552.
-         Если запущено внутри Telegram WebApp, JS изменит эти стили. */
+      /* Локально: фиксированные 422×552.
+         В WebApp будут перезаписаны JS-кодом ниже */
       width: 422px;
       height: 552px;
     }
 
-    /* ======= Canvas ======= */
+    /* ========== CANVAS (НИЗКИЙ Z-INDEX) ========== */
     canvas {
       display: block;
       width: 422px;
       height: 552px;
       background: url(https://i.imgur.com/Y0BMP.png) top left no-repeat;
+      z-index: 0;
     }
 
-    /* ======= Табло со счётом ======= */
+    /* ========== SCOREBOARD ========== */
     #scoreBoard {
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 50px;
       background: rgba(182, 200, 220, 0.7);
-      display: none; /* по умолчанию скрыто */
+      display: none; /* Скрыто, пока не запущена игра */
       align-items: center;
       padding-left: 10px;
-      font-family: 'Gloria Hallelujah', cursive;
       font-size: 20px;
       z-index: 2;
     }
@@ -66,17 +74,18 @@
       line-height: 50px;
     }
 
-    /* ======= Главное меню ======= */
+    /* ========== ГЛАВНОЕ МЕНЮ «Play» ========== */
     #mainMenu {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(255,255,255,0.9);
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      font-family: 'Gloria Hallelujah', cursive;
       z-index: 3;
     }
     #mainMenu h1 {
@@ -100,38 +109,44 @@
       margin: 1rem 0;
     }
     #mainMenu .info .key {
+      width: 16px;
+      height: 16px;
       display: inline-block;
-      width: 16px; height: 16px;
       background: url(https://i.imgur.com/2WEhF.png) no-repeat;
       text-indent: -9999px;
       vertical-align: middle;
     }
-    #mainMenu .info .key.left  { background-position: -92px -621px; }
-    #mainMenu .info .key.right { background-position: -92px -641px; }
-
+    #mainMenu .info .key.left {
+      background-position: -92px -621px;
+    }
+    #mainMenu .info .key.right {
+      background-position: -92px -641px;
+    }
     #mainMenu .button {
       background: #8dc63f url(https://i.imgur.com/2WEhF.png) no-repeat center center;
       background-size: cover;
       color: #000;
       font-size: 1rem;
-      width: 120px; height: 40px;
+      width: 120px;
+      height: 40px;
       border: none;
       border-radius: 5px;
       line-height: 40px;
-      cursor: pointer;
+      margin-top: 1rem;
     }
 
-    /* ======= Меню «Game Over» ======= */
+    /* ========== МЕНЮ «Game Over» ========== */
     #gameOverMenu {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(255,255,255,0.9);
-      display: none; /* изначально скрыто */
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: none; /* Скрыто пока не «Game Over» */
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      font-family: 'Gloria Hallelujah', cursive;
       z-index: 3;
     }
     #gameOverMenu h1 {
@@ -150,199 +165,195 @@
       background-size: cover;
       color: #000;
       font-size: 1rem;
-      width: 120px; height: 40px;
+      width: 120px;
+      height: 40px;
       border: none;
       border-radius: 5px;
       line-height: 40px;
-      cursor: pointer;
       margin-top: 1rem;
     }
 
-    /* ======= On-screen кнопки управления (←/→) ======= */
-    #touchControls {
+    /* ========== НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ (nid клиента) ========== */
+    .touchZone {
       position: absolute;
-      width: 100%;
-      bottom: 10px; left: 0;
-      text-align: center;
-      z-index: 3;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      z-index: 1; /* Ниже меню, зато выше canvas */
+      background: transparent;
     }
-    #touchControls button {
-      width: 50px; height: 50px;
-      margin: 0 15px;
-      font-size: 1.5rem;
-      line-height: 50px;
-      background: rgba(200,200,200,0.6);
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      outline: none;
+    #leftZone {
+      left: 0;
     }
-    #touchControls button:active {
-      background: rgba(150,150,150,0.8);
+    #rightZone {
+      right: 0;
     }
 
-    /* ======= Скрытый спрайт ======= */
+    /* ========== СКРЫТЫЙ СПРАЙТ ========== */
     img#sprite {
       display: none;
     }
   </style>
 </head>
-<body>
 
+<body>
   <div class="container" id="gameContainer">
-    <!-- Табло со счётом -->
+    <!-- Табло со счётом (скрыто до старта) -->
     <div id="scoreBoard"><p id="score">0</p></div>
-    <!-- Canvas -->
+
+    <!-- Canvas игры -->
     <canvas id="canvas">Ваш браузер не поддерживает Canvas</canvas>
 
-    <!-- Главное меню -->
+    <!-- Главное меню «Play» -->
     <div id="mainMenu">
       <h1>Pilots Jump</h1>
       <h3>Hey Pilot,</h3>
-      <h3>...by <a href="https://t.me/secondpilots_cg" target="_blank">Second Pilots 3D</a></h3>
+      <h3>…by <a href="https://t.me/secondpilots_cg" target="_blank">Second Pilots 3D</a></h3>
       <div class="info">
         use <span class="key left">←</span> <span class="key right">→</span> to move and space to (re)start…
       </div>
-      <!-- Привязываем запуск через onclick -->
-      <button class="button" onclick="init()">Play</button>
+      <button class="button" id="btnPlay">Play</button>
     </div>
 
     <!-- Меню «Game Over» -->
     <div id="gameOverMenu">
       <h1>game over!</h1>
       <h3 id="go_score">You scored 0 points!</h3>
-      <button class="button" onclick="reset()">Restart</button>
+      <button class="button" id="btnRestart">Restart</button>
     </div>
 
-    <!-- Подгружаемый спрайт (скрыт) -->
+    <!-- Две невидимые зоны управления (левая/правая) -->
+    <div id="leftZone" class="touchZone"></div>
+    <div id="rightZone" class="touchZone"></div>
+
+    <!-- Скрытый спрайт -->
     <img id="sprite" src="https://i.imgur.com/2WEhF.png" />
-
-    <!-- On-screen кнопки управления -->
-    <div id="touchControls">
-      <button id="leftBtn">←</button>
-      <button id="rightBtn">→</button>
-    </div>
   </div>
 
   <script>
-    // ======== Telegram WebApp: определяем, запущено ли внутри Telegram ========
-    const isTelegram = (typeof Telegram !== 'undefined' && Boolean(Telegram.WebApp));
-    if (isTelegram) {
-      // Уведомляем Telegram, что WebApp готов
-      Telegram.WebApp.ready();
+    // ========== ПЕРЕМЕННЫЕ CANVAS ========== 
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let width, height;
 
-      // Функция подгоняет размеры .container и canvas под весь экран WebApp
-      function adjustForWebApp() {
-        // Telegram задаёт CSS-переменную --tg-nav-bar-height
-        const navbarHeight = parseInt(
-          getComputedStyle(document.documentElement).getPropertyValue('--tg-nav-bar-height')
-        ) || 0;
-
-        const container = document.getElementById('gameContainer');
-        container.style.width  = '100vw';
-        container.style.height = `calc(100vh - ${navbarHeight}px)`;
-
-        const canvasEl = document.getElementById('canvas');
-        canvasEl.style.width  = '100%';
-        canvasEl.style.height = '100%';
-      }
-
-      adjustForWebApp();
-      window.addEventListener('resize', adjustForWebApp);
-    }
-
-    // ======== Canvas: получаем 2D-контекст и задаём размеры ========
-    const canvas = document.getElementById('canvas');
-    const ctx    = canvas.getContext('2d');
-    let   width, height;
-
+    // Устанавливаем размеры canvas сразу и при изменении окна
     function setCanvasSize() {
-      if (isTelegram) {
-        // Внутри Telegram WebApp canvas растягивается на 100% от .container
-        width  = canvas.offsetWidth;
+      if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+        // Внутри WebApp: canvas = 100% от container
+        width = canvas.offsetWidth;
         height = canvas.offsetHeight;
-        canvas.width  = width;
-        canvas.height = height;
       } else {
-        // Локально фиксированные размеры
-        width  = 422;
+        // Локально: фиксированные 422×552
+        width = 422;
         height = 552;
-        canvas.width  = width;
-        canvas.height = height;
       }
+      canvas.width = width;
+      canvas.height = height;
     }
     setCanvasSize();
-    window.addEventListener('resize', setCanvasSize);
+    window.addEventListener("resize", setCanvasSize);
 
-    // ======== Переменные игры ========
-    let platforms            = [];
-    let image                = document.getElementById("sprite");
-    let player, 
-        platformCount        = 10,
-        position             = 0,
-        gravity              = 0.2,
+    // ========== ИНТЕГРАЦИЯ С Telegram.WebApp ==========
+    const isTelegram = typeof Telegram !== "undefined" && Telegram.WebApp;
+    if (isTelegram) {
+      Telegram.WebApp.ready();
+
+      function adjustForWebApp() {
+        const navbarHeight = parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue("--tg-nav-bar-height")
+        ) || 0;
+        const container = document.getElementById("gameContainer");
+        container.style.width = "100vw";
+        container.style.height = `calc(100vh - ${navbarHeight}px)`;
+        container.style.marginTop = `${navbarHeight}px`;
+        setCanvasSize();
+      }
+
+      // Сначала подгоняем container, потом canvas
+      adjustForWebApp();
+      window.addEventListener("resize", adjustForWebApp);
+    }
+
+    // ========== ПЕРЕМЕННЫЕ И ОБЪЕКТЫ ИГРЫ ==========
+    let platforms = [];
+    const image = document.getElementById("sprite");
+    let player, base, Spring, platform_broken_substitute;
+    const platformCount = 10;
+    let position = 0,
+        gravity = 0.2,
         animloop,
-        flag                 = 0,
-        broken               = 0,
-        dir                  = 'left',
-        score                = 0,
-        firstRun             = true,
-        jumpCount            = 0;
+        flag = 0,
+        broken = 0,
+        dir = "left",
+        score = 0,
+        firstRun = true,
+        jumpCount = 0;
 
-    // ======== Определяем классы ========
+    // ========== КЛАССЫ ИГРЫ ==========
     class Base {
       constructor() {
-        this.height  = 5;
-        this.width   = width;
-        this.cx      = 0;
-        this.cy      = 614;
-        this.cwidth  = 100;
+        this.height = 5;
+        this.width = width;
+        this.cx = 0;
+        this.cy = 614;
+        this.cwidth = 100;
         this.cheight = 5;
-        this.x       = 0;
-        this.y       = height - this.height;
+        this.x = 0;
+        this.y = height - this.height;
       }
       draw() {
         try {
           ctx.drawImage(
             image,
-            this.cx, this.cy, this.cwidth, this.cheight,
-            this.x,   this.y,   this.width,  this.height
+            this.cx,
+            this.cy,
+            this.cwidth,
+            this.cheight,
+            this.x,
+            this.y,
+            this.width,
+            this.height
           );
-        } catch (e) { /* игнорируем, пока спрайт не загрузился */ }
+        } catch (e) {}
       }
     }
-    let base = new Base();
 
     class Player {
       constructor() {
-        this.vy         = 11;
-        this.vx         = 0;
-        this.isMovingLeft  = false;
+        this.vy = 11;
+        this.vx = 0;
+        this.isMovingLeft = false;
         this.isMovingRight = false;
-        this.isDead     = false;
-        this.width      = 55;
-        this.height     = 40;
-        this.cx         = 0;
-        this.cy         = 0;
-        this.cwidth     = 110;
-        this.cheight    = 80;
-        this.dir        = "left";
-        this.x          = width / 2 - this.width / 2;
-        this.y          = height;
+        this.isDead = false;
+        this.width = 55;
+        this.height = 40;
+        this.cx = 0;
+        this.cy = 0;
+        this.cwidth = 110;
+        this.cheight = 80;
+        this.dir = "left";
+        this.x = width / 2 - this.width / 2;
+        this.y = height;
       }
       draw() {
         try {
-          if (this.dir == "right")      this.cy = 121;
-          else if (this.dir == "left")  this.cy = 201;
+          if (this.dir == "right") this.cy = 121;
+          else if (this.dir == "left") this.cy = 201;
           else if (this.dir == "right_land") this.cy = 289;
-          else if (this.dir == "left_land")  this.cy = 371;
+          else if (this.dir == "left_land") this.cy = 371;
 
           ctx.drawImage(
             image,
-            this.cx, this.cy, this.cwidth, this.cheight,
-            this.x,  this.y,  this.width,  this.height
+            this.cx,
+            this.cy,
+            this.cwidth,
+            this.cheight,
+            this.x,
+            this.y,
+            this.width,
+            this.height
           );
-        } catch (e) { /* пока не загружен спрайт */ }
+        } catch (e) {}
       }
       jump() {
         this.vy = -8;
@@ -351,71 +362,76 @@
         this.vy = -16;
       }
     }
-    player = new Player();
 
     class Platform {
       constructor() {
-        this.width  = 70;
+        this.width = 70;
         this.height = 17;
-        this.x      = Math.random() * (width - this.width);
-        this.y      = position;
-        position   += (height / platformCount);
-        this.flag   = 0;
-        this.state  = 0;
-        this.cx     = 0;
-        this.cy     = 0;
+        this.x = Math.random() * (width - this.width);
+        this.y = position;
+        position += height / platformCount;
+        this.flag = 0;
+        this.state = 0;
+        this.cx = 0;
+        this.cy = 0;
         this.cwidth = 105;
-        this.cheight= 31;
+        this.cheight = 31;
 
-        // Выбираем тип платформы согласно текущему счёту
-        if (score >= 5000) this.types = [2,3,3,3,4,4,4,4];
-        else if (score >= 2000 && score < 5000) this.types = [2,2,2,3,3,3,3,4,4,4,4];
-        else if (score >= 1000 && score < 2000) this.types = [2,2,2,3,3,3,3,3];
-        else if (score >= 500  && score < 1000) this.types = [1,1,1,1,1,2,2,2,2,3,3,3,3];
-        else if (score >= 100  && score < 500) this.types = [1,1,1,1,2,2];
+        if (score >= 5000) this.types = [2, 3, 3, 3, 4, 4, 4, 4];
+        else if (score >= 2000 && score < 5000)
+          this.types = [2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4];
+        else if (score >= 1000 && score < 2000)
+          this.types = [2, 2, 2, 3, 3, 3, 3, 3];
+        else if (score >= 500 && score < 1000)
+          this.types = [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3];
+        else if (score >= 100 && score < 500) this.types = [1, 1, 1, 1, 2, 2];
         else this.types = [1];
 
         this.type = this.types[Math.floor(Math.random() * this.types.length)];
 
-        // Исключаем подряд два «разрушающихся» (type=3)
         if (this.type == 3 && broken < 1) {
           broken++;
         } else if (this.type == 3 && broken >= 1) {
           this.type = 1;
           broken = 0;
         }
-
         this.moved = 0;
-        this.vx    = 1;
+        this.vx = 1;
       }
       draw() {
         try {
           if (this.type == 1) this.cy = 0;
           else if (this.type == 2) this.cy = 61;
           else if (this.type == 3 && this.flag === 0) this.cy = 31;
-          else if (this.type == 3 && this.flag == 1) this.cy = 1000; // скрываем
+          else if (this.type == 3 && this.flag == 1) this.cy = 1000;
           else if (this.type == 4 && this.state === 0) this.cy = 90;
-          else if (this.type == 4 && this.state == 1) this.cy = 1000;// скрываем
+          else if (this.type == 4 && this.state == 1) this.cy = 1000;
 
           ctx.drawImage(
             image,
-            this.cx, this.cy, this.cwidth, this.cheight,
-            this.x,  this.y,  this.width,  this.height
+            this.cx,
+            this.cy,
+            this.cwidth,
+            this.cheight,
+            this.x,
+            this.y,
+            this.width,
+            this.height
           );
-        } catch (e) { /* может не загрузиться спрайт */ }
+        } catch (e) {}
       }
     }
 
     class PlatformBrokenSub {
       constructor() {
         this.height = 30;
-        this.width  = 70;
-        this.x      = 0;
-        this.y      = 0;
-        this.cx     = 0;
-        this.cy     = 554;
+        this.width = 70;
+        this.x = 0;
+        this.y = 0;
+        this.cx = 0;
+        this.cy = 554;
         this.cwidth = 105;
-        this.cheight= 60;
+        this.cheight = 60;
         this.appearance = false;
       }
       draw() {
@@ -423,26 +439,31 @@
           if (this.appearance === true) {
             ctx.drawImage(
               image,
-              this.cx, this.cy, this.cwidth, this.cheight,
-              this.x, this.y, this.width, this.height
+              this.cx,
+              this.cy,
+              this.cwidth,
+              this.cheight,
+              this.x,
+              this.y,
+              this.width,
+              this.height
             );
           }
         } catch (e) {}
       }
     }
-    let platform_broken_substitute = new PlatformBrokenSub();
 
     class SpringClass {
       constructor() {
-        this.x      = 0;
-        this.y      = 0;
-        this.width  = 26;
+        this.x = 0;
+        this.y = 0;
+        this.width = 26;
         this.height = 30;
-        this.cx     = 0;
-        this.cy     = 0;
+        this.cx = 0;
+        this.cy = 0;
         this.cwidth = 45;
-        this.cheight= 53;
-        this.state  = 0;
+        this.cheight = 53;
+        this.state = 0;
       }
       draw() {
         try {
@@ -450,66 +471,47 @@
           else if (this.state == 1) this.cy = 501;
           ctx.drawImage(
             image,
-            this.cx, this.cy, this.cwidth, this.cheight,
-            this.x,  this.y,  this.width,  this.height
+            this.cx,
+            this.cy,
+            this.cwidth,
+            this.cheight,
+            this.x,
+            this.y,
+            this.width,
+            this.height
           );
         } catch (e) {}
       }
     }
-    let Spring = new SpringClass();
 
-    // Заполняем массив платформ стартово
+    // ========== Инициализируем все объекты до старта ==========
+
+    base = new Base();
+    player = new Player();
+    Spring = new SpringClass();
+    platform_broken_substitute = new PlatformBrokenSub();
+
+    // Заполняем начальную платформу
     for (let i = 0; i < platformCount; i++) {
       platforms.push(new Platform());
     }
 
-
-    /* =================== Функции игрового цикла =================== */
-
-    // Очищает canvas
+    // ========== ФУНКЦИИ ИГРЫ ==========
     function paintCanvas() {
       ctx.clearRect(0, 0, width, height);
     }
 
-    // Обновление состояния игрока (позиция, гравитация, столкновения)
     function playerCalc() {
-      // Устанавливаем спрайт в зависимости от направления/высоты
+      // Настройка спрайта
       if (dir == "left") {
         player.dir = "left";
         if (player.vy < -7 && player.vy > -15) player.dir = "left_land";
-      } 
-      else if (dir == "right") {
+      } else if (dir == "right") {
         player.dir = "right";
         if (player.vy < -7 && player.vy > -15) player.dir = "right_land";
       }
 
-      // Обработка нажатия клавиш
-      document.onkeydown = function(e) {
-        let key = e.keyCode;
-        if (key == 37) { // ←
-          dir = "left";
-          player.isMovingLeft = true;
-        } else if (key == 39) { // →
-          dir = "right";
-          player.isMovingRight = true;
-        }
-        if (key == 32) { // пробел
-          if (firstRun === true) init();
-          else reset();
-        }
-      };
-      document.onkeyup = function(e) {
-        let key = e.keyCode;
-        if (key == 37) {
-          dir = "left";
-          player.isMovingLeft = false;
-        } else if (key == 39) {
-          dir = "right";
-          player.isMovingRight = false;
-        }
-      };
-
-      // Горизонтальная скорость игрока
+      // Горизонтальное движение
       if (player.isMovingLeft === true) {
         player.x += player.vx;
         player.vx -= 0.15;
@@ -524,57 +526,50 @@
         player.x += player.vx;
         if (player.vx > 0) player.vx -= 0.1;
       }
-      // Ограничиваем скорость
-      if (player.vx > 8)  player.vx = 8;
-      if (player.vx < -8) player.vx = -8;
+      if (player.vx > 8) player.vx = 8;
+      else if (player.vx < -8) player.vx = -8;
 
-      // Если игрок «приземлился» на базу (основу) — прыгаем
+      // Прыжок от базы
       if ((player.y + player.height) > base.y && base.y < height) {
         player.jump();
       }
 
-      // Если база ушла вниз, и игрок упал ниже экрана — game over
+      // Game Over при падении
       if (base.y > height && (player.y + player.height) > height && player.isDead != "lol") {
         player.isDead = true;
       }
 
-      // Проходим через стены
+      // Сквозь стены
       if (player.x > width) player.x = 0 - player.width;
       else if (player.x < 0 - player.width) player.x = width;
 
-      // Вертикальное движение игрока: гравитация и «скроллинг» платформ
+      // Вертикальный скролл и движение
       if (player.y >= (height / 2) - (player.height / 2)) {
         player.y += player.vy;
         player.vy += gravity;
       } else {
-        // Когда игрок достигает середины по вертикали, мы движем все платформы вниз
         platforms.forEach(function(p, i) {
           if (player.vy < 0) {
             p.y -= player.vy;
           }
-          // Когда платформа вынесена за экран снизу, создаём новую сверху
           if (p.y > height) {
             platforms[i] = new Platform();
             platforms[i].y = p.y - height;
           }
         });
-        base.y   -= player.vy;
+        base.y -= player.vy;
         player.vy += gravity;
         if (player.vy >= 0) {
-          player.y  += player.vy;
+          player.y += player.vy;
           player.vy += gravity;
         }
         score++;
       }
 
-      // Проверяем коллизии «игрок — платформа» и «игрок — пружинка»
       collides();
-
-      // Если игрок умер, запускаем gameOver
       if (player.isDead === true) gameOver();
     }
 
-    // Отрисовываем пружинку (Spring) над первой платформой типа 1/2
     function springCalc() {
       let s = Spring;
       let p = platforms[0];
@@ -589,25 +584,21 @@
       }
     }
 
-    // Отрисовываем все платформы, включая ломающиеся и шатающиеся, и «сломанные» отдельно
     function platformCalc() {
       let subs = platform_broken_substitute;
       platforms.forEach(function(p, i) {
-        // Двигающиеся платформы (type=2)
         if (p.type == 2) {
           if (p.x < 0 || p.x + p.width > width) p.vx *= -1;
           p.x += p.vx;
         }
-        // Если платформа ломающаяся (type=3) и «сломалась» (flag=1), создаём «ломающийся фрагмент»
         if (p.flag == 1 && subs.appearance === false && jumpCount === 0) {
-          subs.x           = p.x;
-          subs.y           = p.y;
-          subs.appearance  = true;
+          subs.x = p.x;
+          subs.y = p.y;
+          subs.appearance = true;
           jumpCount++;
         }
         p.draw();
       });
-      // Если «сломавшийся фрагмент» появился, отрисовываем и снижаем его вниз
       if (subs.appearance === true) {
         subs.draw();
         subs.y += 8;
@@ -615,81 +606,65 @@
       if (subs.y > height) subs.appearance = false;
     }
 
-    // Коллизии: платформа и пружинка
     function collides() {
-      // Платформы
       platforms.forEach(function(p, i) {
         if (
           player.vy > 0 &&
           p.state === 0 &&
-          (player.x + 15 < p.x + p.width) &&
-          (player.x + player.width - 15 > p.x) &&
-          (player.y + player.height > p.y) &&
-          (player.y + player.height < p.y + p.height)
+          player.x + 15 < p.x + p.width &&
+          player.x + player.width - 15 > p.x &&
+          player.y + player.height > p.y &&
+          player.y + player.height < p.y + p.height
         ) {
-          // Если платформа ломается (type=3) и ещё не сломана:
           if (p.type == 3 && p.flag === 0) {
-            p.flag   = 1;
-            jumpCount= 0;
+            p.flag = 1;
+            jumpCount = 0;
             return;
-          }
-          // Если платформа исчезающая (type=4) и ещё не исчезла:
-          else if (p.type == 4 && p.state === 0) {
+          } else if (p.type == 4 && p.state === 0) {
             player.jump();
             p.state = 1;
-          }
-          // Если она уже сломана (или исчезла) — пропускаем коллизию
-          else if (p.flag == 1) {
-            return;
-          }
+          } else if (p.flag == 1) return;
           else {
             player.jump();
           }
         }
       });
 
-      // Пружинка
       let s = Spring;
       if (
         player.vy > 0 &&
-        (s.state === 0) &&
-        (player.x + 15 < s.x + s.width) &&
-        (player.x + player.width - 15 > s.x) &&
-        (player.y + player.height > s.y) &&
-        (player.y + player.height < s.y + s.height)
+        s.state === 0 &&
+        player.x + 15 < s.x + s.width &&
+        player.x + player.width - 15 > s.x &&
+        player.y + player.height > s.y &&
+        player.y + player.height < s.y + s.height
       ) {
         s.state = 1;
         player.jumpHigh();
       }
     }
 
-    // Обновляем табло со счетом
     function updateScore() {
       let scoreText = document.getElementById("score");
       scoreText.innerText = score;
     }
 
-    // Game Over: анимируем уход платформ, затем показываем экран «Game Over»
     function gameOver() {
       platforms.forEach(function(p, i) {
-        p.y -= 12; // «подтянем» все платформы вверх
+        p.y -= 12;
       });
       if (player.y > height / 2 && flag === 0) {
         player.y -= 8;
         player.vy = 0;
-      } 
-      else if (player.y < height / 2) {
+      } else if (player.y < height / 2) {
         flag = 1;
-      } 
-      else if (player.y + player.height > height) {
-        // Показываем «Game Over» и прячем ScoreBoard
+      } else if (player.y + player.height > height) {
         showGameOverMenu();
         hideScore();
         player.isDead = "lol";
       }
     }
 
-    // Основная функция обновления (отрисовка кадра)
     function update() {
       paintCanvas();
       platformCalc();
@@ -700,127 +675,133 @@
       updateScore();
     }
 
-    // =========== Функция init(): запускаем игру при нажатии «Play» ===========
+    // ========== ИНИЦИАЛИЗАЦИЯ ИГРЫ ==========
+
     function init() {
-      console.log(">> init() вызвана"); // смотрим в консоли DevTools
-
-      // Сбросим счётчики и параметры
+      // Сначала создадим новые объекты, если это первый запуск
+      if (firstRun) {
+        firstRun = false;
+        // Объекты уже созданы в глобальной области
+      }
       jumpCount = 0;
-      firstRun  = false;
+      position = 0;
+      score = 0;
+      flag = 0;
 
-      // Сразу очистим холст
+      // Обновляем объекты заново
+      base = new Base();
+      player = new Player();
+      Spring = new SpringClass();
+      platform_broken_substitute = new PlatformBrokenSub();
+      platforms = [];
+      for (let i = 0; i < platformCount; i++) {
+        platforms.push(new Platform());
+      }
+
       paintCanvas();
-
-      // Запускаем бесконечный цикл через requestAnimationFrame
       animloop = function() {
         update();
         requestAnimationFrame(animloop);
       };
       animloop();
-
-      // Скрываем главное меню и показываем ScoreBoard
       hideMainMenu();
       showScore();
     }
 
-    // =========== Функция reset(): перезапуск игры при «Restart» ===========
     function reset() {
-      console.log(">> reset() вызвана");
-
+      // Аналогично init, но без создания заново флага firstRun
       hideGameOverMenu();
       showScore();
       player.isDead = false;
-      flag           = 0;
-      position       = 0;
-      score          = 0;
-      jumpCount      = 0;
+      flag = 0;
+      position = 0;
+      score = 0;
+      jumpCount = 0;
 
-      // Пересоздаём все объекты
-      base                      = new Base();
-      player                    = new Player();
-      Spring                    = new SpringClass();
-      platform_broken_substitute= new PlatformBrokenSub();
-      platforms                 = [];
+      base = new Base();
+      player = new Player();
+      Spring = new SpringClass();
+      platform_broken_substitute = new PlatformBrokenSub();
+      platforms = [];
       for (let i = 0; i < platformCount; i++) {
         platforms.push(new Platform());
       }
     }
 
-    // ======== Показываем/скрываем меню ========
     function hideMainMenu() {
-      document.getElementById("mainMenu").style.display = 'none';
-    }
-    function showMainMenu() {
-      document.getElementById("mainMenu").style.display = 'flex';
+      document.getElementById("mainMenu").style.display = "none";
     }
     function showGameOverMenu() {
-      document.getElementById("gameOverMenu").style.display = 'flex';
+      document.getElementById("gameOverMenu").style.display = "flex";
     }
     function hideGameOverMenu() {
-      document.getElementById("gameOverMenu").style.display = 'none';
+      document.getElementById("gameOverMenu").style.display = "none";
     }
-
     function showScore() {
-      document.getElementById("scoreBoard").style.display = 'flex';
+      document.getElementById("scoreBoard").style.display = "flex";
     }
     function hideScore() {
-      document.getElementById("scoreBoard").style.display = 'none';
+      document.getElementById("scoreBoard").style.display = "none";
     }
 
-    // ======= «Меню-цикл» (например, чтобы фоновая анимация шла, пока видны меню) =======
+    // ========== Запускаем начальный «демо-цикл» (когда ещё не запустили игру) ==========
     function menuLoop() {
       update();
       requestAnimationFrame(menuLoop);
     }
-    // Запускаем сразу, чтобы отображалось хотя бы несколько кадров меню перед «Play»
     menuLoop();
 
-    // ======= On-screen-кнопки «←» и «→» =======
-    const leftBtn  = document.getElementById('leftBtn');
-    const rightBtn = document.getElementById('rightBtn');
-    if (leftBtn && rightBtn) {
-      // Нажатие/удержание «←»
-      leftBtn.addEventListener('mousedown', () => {
-        dir = 'left';
-        player.isMovingLeft = true;
-      });
-      leftBtn.addEventListener('mouseup', () => {
-        player.isMovingLeft = false;
-      });
-      leftBtn.addEventListener('mouseleave', () => {
-        player.isMovingLeft = false;
-      });
-      leftBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        dir = 'left';
-        player.isMovingLeft = true;
-      });
-      leftBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        player.isMovingLeft = false;
-      });
+    // ========== ОБРАБОТЧИКИ ДЛЯ КНОПОК ==========
 
-      // Нажатие/удержание «→»
-      rightBtn.addEventListener('mousedown', () => {
-        dir = 'right';
-        player.isMovingRight = true;
-      });
-      rightBtn.addEventListener('mouseup', () => {
-        player.isMovingRight = false;
-      });
-      rightBtn.addEventListener('mouseleave', () => {
-        player.isMovingRight = false;
-      });
-      rightBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        dir = 'right';
-        player.isMovingRight = true;
-      });
-      rightBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        player.isMovingRight = false;
-      });
-    }
+    document.getElementById("btnPlay").addEventListener("click", init);
+    document.getElementById("btnRestart").addEventListener("click", reset);
+
+    // ========== ОБРАБОТЧИКИ ЗОН ТАЧА / КЛИКА (Left/Right) ==========
+
+    const leftZone = document.getElementById("leftZone");
+    const rightZone = document.getElementById("rightZone");
+
+    // Левая зона: движение влево, пока держим
+    leftZone.addEventListener("mousedown", () => {
+      dir = "left";
+      player.isMovingLeft = true;
+    });
+    leftZone.addEventListener("mouseup", () => {
+      player.isMovingLeft = false;
+    });
+    leftZone.addEventListener("mouseleave", () => {
+      player.isMovingLeft = false;
+    });
+    leftZone.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dir = "left";
+      player.isMovingLeft = true;
+    });
+    leftZone.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      player.isMovingLeft = false;
+    });
+
+    // Правая зона: движение вправо, пока держим
+    rightZone.addEventListener("mousedown", () => {
+      dir = "right";
+      player.isMovingRight = true;
+    });
+    rightZone.addEventListener("mouseup", () => {
+      player.isMovingRight = false;
+    });
+    rightZone.addEventListener("mouseleave", () => {
+      player.isMovingRight = false;
+    });
+    rightZone.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dir = "right";
+      player.isMovingRight = true;
+    });
+    rightZone.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      player.isMovingRight = false;
+    });
   </script>
 </body>
 </html>
