@@ -41,6 +41,10 @@ class Player {
 
     if (this.x < 0) this.x = 0;
     if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+
+    if (this.y > canvas.height) {
+      endGame();
+    }
   }
 
   draw() {
@@ -75,15 +79,25 @@ function init() {
 
 function endGame() {
   gameOver = true;
+
+  // Берём реальное значение jumpCount
   document.getElementById("go_score").textContent = `You scored ${score} points`;
-  document.getElementById("gameOverMenu").style.display = "block";
+
+  document.getElementById("gameOverMenu").style.display = "flex";
 }
+
 
 function animate() {
   if (gameOver) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   player.update();
   player.draw();
+
+  // Увеличиваем счёт и отображаем
+  score++;
+  document.getElementById("score").textContent = score.toString();
+
   requestAnimationFrame(animate);
 }
 
@@ -103,42 +117,18 @@ window.addEventListener("keyup", (e) => {
   if (e.key === "ArrowRight") player.isMovingRight = false;
 });
 
-// Управление касаниями и мышью
+// Касания
 const leftZone = document.getElementById("leftZone");
 const rightZone = document.getElementById("rightZone");
 
-leftZone.addEventListener("mousedown", () => {
-  if (player) player.isMovingLeft = true;
-});
-leftZone.addEventListener("mouseup", () => {
-  if (player) player.isMovingLeft = false;
-});
-leftZone.addEventListener("mouseleave", () => {
-  if (player) player.isMovingLeft = false;
-});
-leftZone.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-  if (player) player.isMovingLeft = true;
-});
-leftZone.addEventListener("touchend", (e) => {
-  e.preventDefault();
-  if (player) player.isMovingLeft = false;
-});
+leftZone.addEventListener("mousedown", () => { if (player) player.isMovingLeft = true; });
+leftZone.addEventListener("mouseup", () => { if (player) player.isMovingLeft = false; });
+leftZone.addEventListener("mouseleave", () => { if (player) player.isMovingLeft = false; });
+leftZone.addEventListener("touchstart", (e) => { e.preventDefault(); if (player) player.isMovingLeft = true; });
+leftZone.addEventListener("touchend", (e) => { e.preventDefault(); if (player) player.isMovingLeft = false; });
 
-rightZone.addEventListener("mousedown", () => {
-  if (player) player.isMovingRight = true;
-});
-rightZone.addEventListener("mouseup", () => {
-  if (player) player.isMovingRight = false;
-});
-rightZone.addEventListener("mouseleave", () => {
-  if (player) player.isMovingRight = false;
-});
-rightZone.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-  if (player) player.isMovingRight = true;
-});
-rightZone.addEventListener("touchend", (e) => {
-  e.preventDefault();
-  if (player) player.isMovingRight = false;
-});
+rightZone.addEventListener("mousedown", () => { if (player) player.isMovingRight = true; });
+rightZone.addEventListener("mouseup", () => { if (player) player.isMovingRight = false; });
+rightZone.addEventListener("mouseleave", () => { if (player) player.isMovingRight = false; });
+rightZone.addEventListener("touchstart", (e) => { e.preventDefault(); if (player) player.isMovingRight = true; });
+rightZone.addEventListener("touchend", (e) => { e.preventDefault(); if (player) player.isMovingRight = false; });

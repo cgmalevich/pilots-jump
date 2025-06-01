@@ -1,161 +1,832 @@
-/* ================== RESET ================== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-html,
-body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  font-family: 'Gloria Hallelujah', cursive;
-  background: #f5f0e8;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Обязательно для корректного масштабирования на телефонах -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Pilots Jump</title>
+
+  <!-- =================== CSS СТИЛИ =================== -->
+  <style>
+   @import url('https://fonts.googleapis.com/css2?family=Lobster&display=swap');
+html, body {
+  font-family: 'Lobster', cursive !important;
+  ...
 }
 
-/* =============== CONTAINER =============== */
-#gameContainer {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  background: url(https://i.imgur.com/Y0BMP.png) top left;
-  overflow: hidden;
-}
 
-/* =============== CANVAS =============== */
-#canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      /* Ставим Lobster всем элементам */
+      font-family: 'Lobster', cursive !important;
+      background: #f5f0e8;
+    }
 
-/* Скрываем тег <img> со спрайтом */
-#sprite {
-  display: none;
-}
+    /* Контейнер всей игры */
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: url(https://i.imgur.com/Y0BMP.png) top left;
+      overflow: hidden;
+    }
 
-/* ========== MAIN MENU «PLAY» ========== */
-#mainMenu {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-#mainMenu h1 {
-  font-size: 48px;
-  color: #5a5816;
-  transform: rotate(-10deg);
-  margin-bottom: 10px;
-  text-align: center;
-}
-#mainMenu h3 {
-  font-size: 20px;
-  color: #5e96be;
-  margin-bottom: 30px;
-  text-align: center;
-}
-#btnPlay {
-  width: 120px;
-  height: 40px;
-  background: url(https://i.imgur.com/2WEhF.png) 0 0 no-repeat;
-  text-align: center;
-  line-height: 40px;
-  font-size: 16px;
-  color: #000;
-  cursor: pointer;
-}
+    /* Canvas для рисования */
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
 
-/* ========== GAME OVER MENU ========== */
-#gameOverMenu {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-#gameOverMenu h1 {
-  font-size: 48px;
-  color: #a33;
-  transform: rotate(-5deg);
-  margin-bottom: 10px;
-  text-align: center;
-}
-#gameOverMenu h3 {
-  font-size: 20px;
-  color: #333;
-  margin-bottom: 30px;
-  text-align: center;
-}
-#btnRestart {
-  width: 120px;
-  height: 40px;
-  background: url(https://i.imgur.com/2WEhF.png) 0 -60px no-repeat;
-  text-align: center;
-  line-height: 40px;
-  font-size: 16px;
-  color: #000;
-  cursor: pointer;
-}
+    /* Скрываем все <img> (используем лишь для источников) */
+    #sprite, #playerImg {
+      display: none;
+    }
 
-/* ============ SCOREBOARD ============ */
-#scoreBoard {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(182, 200, 220, 0.7);
-  padding: 5px 10px;
-  border-radius: 5px;
-  display: none;
-  z-index: 5;
-}
-#scoreBoard p {
-  font-size: 18px;
-  color: #000;
-}
+    /* ----- ГЛАВНОЕ МЕНЮ «PLAY» ----- */
+    #mainMenu {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #mainMenu h1 {
+      font-size: 48px;
+      color: #5a5816;
+      transform: rotate(-10deg);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #mainMenu h3 {
+      font-size: 20px;
+      color: #5e96be;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    #btnPlay {
+      width: 360px;   /* в 3 раза больше стандартных 120px */
+      height: 120px;  /* в 3 раза больше 40px */
+      background: url("start.png") center center no-repeat;
+      background-size: contain;
+      cursor: pointer;
+      margin-top: 20px;
+    }
 
-/* ========= INSTRUCTION TEXT ========= */
-#infoText {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: green;
-  font-size: 14px;
-  z-index: 5;
-  text-align: center;
-}
+    /* ----- МЕНЮ «GAME OVER» ----- */
+    #gameOverMenu {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.9);
+      display: none;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding-top: 40px;
+      z-index: 10;
+    }
+    #gameOverMenu h1 {
+      font-size: 48px;
+      color: #a33;
+      transform: rotate(-5deg);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #gameOverMenu h3 {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #btnRestart {
+      width: 360px;   /* в 3 раза больше 120px */
+      height: 120px;  /* в 3 раза больше 40px */
+      background: url("restart.png") center center no-repeat;
+      background-size: contain;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
 
-/* ===== TOUCH ZONES (LEFT / RIGHT) ===== */
-#leftZone,
-#rightZone {
-  position: absolute;
-  top: 0;
-  width: 50%;
-  height: 100%;
-  z-index: 2;
-}
-#leftZone {
-  left: 0;
-}
-#rightZone {
-  right: 0;
-}
+    /* ----- СЧЁТЧИК ОЧКОВ ----- */
+    #scoreBoard {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(182,200,220,0.7);
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: none; /* после старта показывается */
+      z-index: 5;
+    }
+    #scoreBoard p {
+      font-size: 18px;
+      color: #000;
+    }
 
-/* Для временной отладки можно раскомментировать:
-#leftZone { background: rgba(255, 0, 0, 0.1); }
-#rightZone { background: rgba(0, 0, 255, 0.1); }
-*/
+    /* ----- ИНСТРУКЦИЯ СНИЗУ ----- */
+    #infoText {
+      position: absolute;
+      bottom: 10px; left: 50%;
+      transform: translateX(-50%);
+      color: green;
+      font-size: 14px;
+      z-index: 5;
+      text-align: center;
+    }
+
+    /* ----- НЕВИДИМЫЕ ЗОНЫ КАСАНИЯ (лево/право) ----- */
+    #leftZone, #rightZone {
+      position: absolute;
+      top: 0; height: 100%;
+      width: 50%;
+      z-index: 2;
+    }
+    #leftZone { left: 0; }
+    #rightZone { right: 0; }
+
+    /* ----- ТАБЛИЦА ЛИДЕРОВ ----- */
+    #leaderboard {
+      width: 90%;
+      max-width: 350px;
+      margin-top: 20px;
+      border: 2px solid #5a5816;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      display: none;
+    }
+    #leaderboard h4 {
+      background: #5a5816;
+      color: #fff;
+      padding: 6px 0;
+      text-align: center;
+      font-size: 18px;
+      margin: 0;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+    #leaderboard table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #leaderboard th, #leaderboard td {
+      padding: 6px 4px;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid #ddd;
+    }
+    #leaderboard th {
+      background: #e8e8e8;
+      font-weight: bold;
+    }
+    #leaderboard tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== КОНТЕЙНЕР С ИГРОВОЙ СЦЕНОЙ ===== -->
+  <div id="gameContainer">
+    <canvas id="canvas"></canvas>
+
+    <!-- 1) Спрайт для платформ/пружин (скрыт) -->
+    <img id="sprite" src="https://i.imgur.com/2WEhF.png" alt="spritesheet">
+
+    <!-- 2) Ваш личный персонаж (скрыт) -->
+    <img id="playerImg" src="myCharacter.png" alt="player">
+
+    <!-- ===== МЕНЮ «PLAY» ===== -->
+    <div id="mainMenu">
+      <h1>Pilots Jump</h1>
+      <h3>Hey Pilot, ...by Second Pilots 3D</h3>
+      <div id="btnPlay"></div>
+    </div>
+
+    <!-- ===== МЕНЮ «GAME OVER» ===== -->
+    <div id="gameOverMenu">
+      <h1>Game Over!</h1>
+      <h3 id="go_score">You scored 0 points</h3>
+      <div id="btnRestart"></div>
+
+      <!-- Таблица лидеров (показывается после Game Over) -->
+      <div id="leaderboard">
+        <h4>Leaderboard</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Best Score</th>
+            </tr>
+          </thead>
+          <tbody id="lb_body">
+            <!-- сюда JavaScript вставит топ-10 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== СЧЁТЧИК ОЧКОВ ===== -->
+    <div id="scoreBoard">
+      <p id="score">0</p>
+    </div>
+
+    <!-- ===== ИНСТРУКЦИЯ СНИЗУ ===== -->
+    <div id="infoText">use ← → to move and space to (re)start…</div>
+
+    <!-- ===== НЕВИДИМЫЕ ЗОНЫ ДЛЯ КАСАНИЙ ===== -->
+    <div id="leftZone"></div>
+    <div id="rightZone"></div>
+  </div>
+
+  <!-- =================== JS-КОД =================== -->
+  <script>
+    // 1) Работа с Canvas и контейнером
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let width, height;
+
+    function setCanvasSizeAndContainer() {
+      const container = document.getElementById("gameContainer");
+      if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+        const navbarHeight =
+          parseInt(
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--tg-nav-bar-height")
+          ) || 0;
+        container.style.width = "100vw";
+        container.style.height = `calc(100vh - ${navbarHeight}px)`;
+        container.style.marginTop = `${navbarHeight}px`;
+        width = container.clientWidth;
+        height = container.clientHeight;
+      } else {
+        container.style.width = "100vw";
+        container.style.height = "100vh";
+        container.style.marginTop = "0";
+        width = container.clientWidth;
+        height = container.clientHeight;
+      }
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    setCanvasSizeAndContainer();
+    window.addEventListener("resize", setCanvasSizeAndContainer);
+
+    if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+    }
+
+    // 2) Игровые переменные и классы
+    let platforms = [];
+    const spriteImage = document.getElementById("sprite");
+    let player, base, spring, platformBrokenSub;
+
+    const PLATFORM_COUNT = 10;
+    let position = 0,
+        gravity = 0.2,
+        animloop,
+        isFalling = 0,
+        broken = 0,
+        dir = "left",
+        score = 0,
+        jumpCount = 0;
+
+    // ===== Класс Base (пол) =====
+    class Base {
+      constructor() {
+        this.height = 5;
+        this.width = width;
+        this.cx = 0;   this.cy = 614;
+        this.cw = 100; this.ch = 5;
+        this.x = 0;    this.y = height - this.height;
+      }
+      draw() {
+        try {
+          ctx.drawImage(
+            spriteImage,
+            this.cx, this.cy, this.cw, this.ch,
+            this.x, this.y, this.width, this.height
+          );
+        } catch (e) {}
+      }
+    }
+
+    // ===== Класс Player (игрок) – рисуется из вашего playerImg =====
+    class Player {
+      constructor() {
+        this.vy = 11;
+        this.vx = 0;
+        this.isMovingLeft = false;
+        this.isMovingRight = false;
+        this.isDead = false;
+
+        // Размер 60×60 px
+        this.width = 60;
+        this.height = 60;
+
+        this.x = width / 2 - this.width / 2;
+        this.y = height;
+        this.img = document.getElementById("playerImg");
+      }
+
+      draw() {
+        try {
+          ctx.drawImage(
+            this.img,
+            0, 0,
+            this.img.width, this.img.height,
+            this.x, this.y,
+            this.width, this.height
+          );
+        } catch (e) {}
+      }
+
+      jump() {
+        this.vy = -8;    // обычный прыжок
+      }
+      jumpHigh() {
+        this.vy = -16;   // высокий прыжок
+      }
+    }
+
+    // ===== Класс Platform (платформа) =====
+    class Platform {
+      constructor() {
+        this.width = 100;
+        this.height = 17;
+        this.x = Math.random() * (width - this.width);
+        this.y = position;
+        position += height / PLATFORM_COUNT;
+        this.flag = 0;
+        this.state = 0;
+        this.cx = 0;   this.cy = 0;
+        this.cw = 105;   this.ch = 31;
+
+        if (score >= 5000) this.types = [2,3,3,3,4,4,4,4];
+        else if (score >= 2000) this.types = [2,2,2,3,3,3,3,4,4,4,4];
+        else if (score >= 1000) this.types = [2,2,2,3,3,3,3,3];
+        else if (score >= 500) this.types = [1,1,1,1,1,2,2,2,2,3,3,3,3];
+        else if (score >= 100) this.types = [1,1,1,1,2,2];
+        else this.types = [1];
+
+        this.type = this.types[Math.floor(Math.random() * this.types.length)];
+        if (this.type === 3 && broken < 1) broken++;
+        else if (this.type === 3 && broken >= 1) {
+          this.type = 1;
+          broken = 0;
+        }
+        this.vx = 1;
+      }
+      draw() {
+        try {
+          if (this.type === 1) this.cy = 0;
+          else if (this.type === 2) this.cy = 61;
+          else if (this.type === 3 && this.flag === 0) this.cy = 31;
+          else if (this.type === 3 && this.flag === 1) this.cy = 1000;
+          else if (this.type === 4 && this.state === 0) this.cy = 90;
+          else if (this.type === 4 && this.state === 1) this.cy = 1000;
+
+          ctx.drawImage(
+            spriteImage,
+            this.cx, this.cy, this.cw, this.ch,
+            this.x, this.y, this.width, this.height
+          );
+        } catch (e) {}
+      }
+    }
+
+    // ===== Класс PlatformBrokenSub (сломанная) =====
+    class PlatformBrokenSub {
+      constructor() {
+        this.height = 30;
+        this.width = 100;
+        this.x = 0; this.y = 0;
+        this.cx = 0;   this.cy = 554;
+        this.cw = 105;   this.ch = 60;
+        this.appearance = false;
+      }
+      draw() {
+        try {
+          if (this.appearance) {
+            ctx.drawImage(
+              spriteImage,
+              this.cx, this.cy, this.cw, this.ch,
+              this.x, this.y, this.width, this.height
+            );
+          }
+        } catch (e) {}
+      }
+    }
+
+    // ===== Класс SpringClass (пружина) =====
+    class SpringClass {
+      constructor() {
+        this.x = 0; this.y = 0;
+        this.width = 26; this.height = 30;
+        this.cx = 0;   this.cy = 0;
+        this.cw = 45; this.ch = 53;
+        this.state = 0;
+      }
+      draw() {
+        try {
+          if (this.state === 0) this.cy = 445;
+          else if (this.state === 1) this.cy = 501;
+          ctx.drawImage(
+            spriteImage,
+            this.cx, this.cy, this.cw, this.ch,
+            this.x, this.y, this.width, this.height
+          );
+        } catch (e) {}
+      }
+    }
+
+    // ====================== ФУНКЦИИ ======================
+
+    function paintCanvas() {
+      ctx.clearRect(0, 0, width, height);
+    }
+
+    function playerCalc() {
+      if (dir === "left") {
+        player.dir = "left";
+        if (player.vy < -7 && player.vy > -15) player.dir = "left_land";
+      } else if (dir === "right") {
+        player.dir = "right";
+        if (player.vy < -7 && player.vy > -15) player.dir = "right_land";
+      }
+
+      // ===== горизонтальная физика =====
+      if (player.isMovingLeft) {
+        player.x += player.vx;
+        player.vx -= 0.15;
+      } else {
+        player.x += player.vx;
+        if (player.vx < 0) player.vx += 0.1;
+      }
+      if (player.isMovingRight) {
+        player.x += player.vx;
+        player.vx += 0.15;
+      } else {
+        player.x += player.vx;
+        if (player.vx > 0) player.vx -= 0.1;
+      }
+      if (player.vx > 8) player.vx = 8;
+      else if (player.vx < -8) player.vx = -8;
+
+      // Прыжок от базы
+      if ((player.y + player.height) > base.y && base.y < height) {
+        player.jump();
+      }
+
+      // Game Over
+      if (
+        base.y > height &&
+        (player.y + player.height) > height &&
+        player.isDead !== "lol"
+      ) {
+        player.isDead = true;
+      }
+
+      // Сквозь стены
+      if (player.x > width) player.x = -player.width;
+      else if (player.x < -player.width) player.x = width;
+
+      // Вертикальная физика + «экран вверх»
+      if (player.y >= height / 2 - player.height / 2) {
+        player.y += player.vy;
+        player.vy += gravity;
+      } else {
+        platforms.forEach((p, i) => {
+          if (player.vy < 0) p.y -= player.vy;
+          if (p.y > height) {
+            platforms[i] = new Platform();
+            platforms[i].y = p.y - height;
+          }
+        });
+        base.y -= player.vy;
+        player.vy += gravity;
+        if (player.vy >= 0) {
+          player.y += player.vy;
+          player.vy += gravity;
+        }
+        // Увеличиваем счёт здесь
+        score++;
+      }
+
+      collides();
+      if (player.isDead) gameOver();
+    }
+
+    function springCalc() {
+      let s = spring;
+      let p = platforms[0];
+      if (p.type === 1 || p.type === 2) {
+        s.x = p.x + p.width / 2 - s.width / 2;
+        s.y = p.y - p.height - 10;
+        if (s.y > height / 1.1) s.state = 0;
+        s.draw();
+      } else {
+        s.x = -s.width;
+        s.y = -s.height;
+      }
+    }
+
+    function platformCalc() {
+      let subs = platformBrokenSub;
+      platforms.forEach((p, i) => {
+        if (p.type === 2) {
+          if (p.x < 0 || p.x + p.width > width) p.vx *= -1;
+          p.x += p.vx;
+        }
+        if (p.flag === 1 && !subs.appearance && jumpCount === 0) {
+          subs.x = p.x;
+          subs.y = p.y;
+          subs.appearance = true;
+          jumpCount++;
+        }
+        p.draw();
+      });
+      if (subs.appearance) {
+        subs.draw();
+        subs.y += 8;
+      }
+      if (subs.y > height) subs.appearance = false;
+    }
+
+    function collides() {
+      platforms.forEach((p, i) => {
+        if (
+          player.vy > 0 &&
+          p.state === 0 &&
+          player.x + 15 < p.x + p.width &&
+          player.x + player.width - 15 > p.x &&
+          player.y + player.height > p.y &&
+          player.y + player.height < p.y + p.height
+        ) {
+          if (p.type === 3 && p.flag === 0) {
+            p.flag = 1;
+            jumpCount = 0;
+            return;
+          } else if (p.type === 4 && p.state === 0) {
+            player.jump();
+            p.state = 1;
+          } else if (p.flag === 1) {
+            return;
+          } else {
+            player.jump();
+          }
+        }
+      });
+
+      let s = spring;
+      if (
+        player.vy > 0 &&
+        s.state === 0 &&
+        player.x + 15 < s.x + s.width &&
+        player.x + player.width - 15 > s.x &&
+        player.y + player.height > s.y &&
+        player.y + player.height < s.y + s.height
+      ) {
+        s.state = 1;
+        player.jumpHigh();
+      }
+    }
+
+    function updateScore() {
+      // отображаем счёт из переменной `score`
+      document.getElementById("score").innerText = score;
+    }
+
+    // Отправка счета на сервер (фейковый URL – замените на свой)
+    async function submitScoreToServer(userId, scoreValue) {
+      try {
+        const response = await fetch("https://ваш_сервер/api/submit_score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, score: scoreValue })
+        });
+        const data = await response.json();
+        return data;
+      } catch (err) {
+        console.error("Error submitting score:", err);
+        return null;
+      }
+    }
+
+    // Получение топ-10 с сервера
+    async function fetchTop10() {
+      try {
+        const response = await fetch("https://ваш_сервер/api/top10");
+        const data = await response.json();
+        return data.top10;
+      } catch (err) {
+        console.error("Error fetching top10:", err);
+        return [];
+      }
+    }
+
+    // Показать таблицу лидеров после Game Over
+    async function showLeaderboard(userId, finalScore) {
+      const lbDiv = document.getElementById("leaderboard");
+      const lbBody = document.getElementById("lb_body");
+
+      const submitResult = await submitScoreToServer(userId, finalScore);
+      if (!submitResult) {
+        console.warn("Не удалось отправить счёт, получаем только топ-10.");
+      }
+
+      const topList = await fetchTop10();
+      lbBody.innerHTML = "";
+
+      topList.forEach((item, idx) => {
+        const row = document.createElement("tr");
+        const cellRank = document.createElement("td");
+        const cellName = document.createElement("td");
+        const cellScore = document.createElement("td");
+
+        cellRank.innerText = idx + 1;
+        cellName.innerText = item.username;
+        cellScore.innerText = item.best_score;
+
+        row.appendChild(cellRank);
+        row.appendChild(cellName);
+        row.appendChild(cellScore);
+        lbBody.appendChild(row);
+      });
+
+      lbDiv.style.display = "block";
+    }
+
+    // Game Over
+    async function gameOver() {
+      platforms.forEach((p) => p.y -= 12);
+      if (player.y > height / 2 && isFalling === 0) {
+        player.y -= 8;
+        player.vy = 0;
+      } else if (player.y < height / 2) {
+        isFalling = 1;
+      } else if (player.y + player.height > height) {
+        // Здесь ставим реальный счёт в textContent
+        document.getElementById("go_score").textContent = `You scored ${score} points`;
+
+        showGameOverMenu();
+        hideScore();
+
+        let userId = null;
+        if (typeof Telegram !== "undefined" && Telegram.WebApp) {
+          const initData = Telegram.WebApp.initDataUnsafe || {};
+          userId = initData.user ? initData.user.id : null;
+        }
+        userId = userId || 0;
+        await showLeaderboard(userId, score);
+        player.isDead = "lol";
+      }
+    }
+
+    function update() {
+      paintCanvas();
+      platformCalc();
+      springCalc();
+      playerCalc();
+      player.draw();
+      base.draw();
+      updateScore();
+    }
+
+    // Инициализация игры
+    function init() {
+      jumpCount = 0;
+      position = height / 3; // опустить платформы чуть ниже
+      score = 0;
+      isFalling = 0;
+      broken = 0;
+
+      base = new Base();
+      player = new Player();
+      spring = new SpringClass();
+      platformBrokenSub = new PlatformBrokenSub();
+      platforms = [];
+      for (let i = 0; i < PLATFORM_COUNT; i++) {
+        platforms.push(new Platform());
+      }
+
+      hideGameOverMenu();
+      document.getElementById("leaderboard").style.display = "none";
+
+      paintCanvas();
+      animloop = function() {
+        update();
+        requestAnimationFrame(animloop);
+      };
+      animloop();
+
+      hideMainMenu();
+      showScore();
+    }
+
+    function reset() {
+      hideGameOverMenu();
+      document.getElementById("leaderboard").style.display = "none";
+      showScore();
+      player.isDead = false;
+      isFalling = 0;
+      broken = 0;
+      position = height / 3;
+      score = 0;
+      jumpCount = 0;
+
+      base = new Base();
+      player = new Player();
+      spring = new SpringClass();
+      platformBrokenSub = new PlatformBrokenSub();
+      platforms = [];
+      for (let i = 0; i < PLATFORM_COUNT; i++) {
+        platforms.push(new Platform());
+      }
+    }
+
+    function showMainMenu() {
+      document.getElementById("mainMenu").style.display = "flex";
+      document.getElementById("gameOverMenu").style.display = "none";
+      document.getElementById("leaderboard").style.display = "none";
+      hideScore();
+    }
+    function hideMainMenu() {
+      document.getElementById("mainMenu").style.display = "none";
+    }
+    function showGameOverMenu() {
+      document.getElementById("gameOverMenu").style.display = "flex";
+    }
+    function hideGameOverMenu() {
+      document.getElementById("gameOverMenu").style.display = "none";
+    }
+    function showScore() {
+      document.getElementById("scoreBoard").style.display = "flex";
+    }
+    function hideScore() {
+      document.getElementById("scoreBoard").style.display = "none";
+    }
+
+    // Обработчики кнопок
+    document.getElementById("btnPlay").addEventListener("click", init);
+    document.getElementById("btnRestart").addEventListener("click", reset);
+
+    // Обработчики зон касания
+    const leftZone = document.getElementById("leftZone");
+    const rightZone = document.getElementById("rightZone");
+
+    leftZone.addEventListener("mousedown", () => {
+      dir = "left";
+      player.isMovingLeft = true;
+    });
+    leftZone.addEventListener("mouseup", () => {
+      player.isMovingLeft = false;
+    });
+    leftZone.addEventListener("mouseleave", () => {
+      player.isMovingLeft = false;
+    });
+    leftZone.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dir = "left";
+      player.isMovingLeft = true;
+    });
+    leftZone.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      player.isMovingLeft = false;
+    });
+
+    rightZone.addEventListener("mousedown", () => {
+      dir = "right";
+      player.isMovingRight = true;
+    });
+    rightZone.addEventListener("mouseup", () => {
+      player.isMovingRight = false;
+    });
+    rightZone.addEventListener("mouseleave", () => {
+      player.isMovingRight = false;
+    });
+    rightZone.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      dir = "right";
+      player.isMovingRight = true;
+    });
+    rightZone.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      player.isMovingRight = false;
+    });
+  </script>
+</body>
+</html>
