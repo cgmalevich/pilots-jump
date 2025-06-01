@@ -1,564 +1,144 @@
-// 1) Работа с Canvas и контейнером
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-let width, height;
 
-function setCanvasSizeAndContainer() {
-  const container = document.getElementById("gameContainer");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-  // Если запущено внутри Telegram WebApp → учитываем высоту navbar
-  if (typeof Telegram !== "undefined" && Telegram.WebApp) {
-    const navbarHeight =
-      parseInt(
-        getComputedStyle(document.documentElement).getPropertyValue(
-          "--tg-nav-bar-height"
-        )
-      ) || 0;
-
-    container.style.width = "100vw";
-    container.style.height = `calc(100vh - ${navbarHeight}px)`;
-    container.style.marginTop = `${navbarHeight}px`;
-
-    width = container.clientWidth;
-    height = container.clientHeight;
-  } else {
-    // Иначе локально: 100vw × 100vh
-    container.style.width = "100vw";
-    container.style.height = "100vh";
-    container.style.marginTop = "0";
-
-    width = container.clientWidth;
-    height = container.clientHeight;
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-}
-
-setCanvasSizeAndContainer();
-window.addEventListener("resize", setCanvasSizeAndContainer);
-
-if (typeof Telegram !== "undefined" && Telegram.WebApp) {
-  Telegram.WebApp.ready();
-}
-
-// 2) Игровые переменные и инициализация
-let platforms = [];
-const image = document.getElementById("sprite");
-let player, base, Spring, platform_broken_substitute;
-
-const platformCount = 10;
-let position = 0,
-  gravity = 0.2,
-  animloop,
-  flag = 0,
-  broken = 0,
-  dir = "left",
-  score = 0,
-  firstRun = true,
-  jumpCount = 0;
-
-// ==================== КЛАССЫ ====================
-class Base {
-  constructor() {
-    this.height = 5;
-    this.width = width;
-    this.cx = 0;
-    this.cy = 614;
-    this.cwidth = 100;
-    this.cheight = 5;
-    this.x = 0;
-    this.y = height - this.height;
-  }
-  draw() {
-    try {
-      ctx.drawImage(
-        image,
-        this.cx,
-        this.cy,
-        this.cwidth,
-        this.cheight,
-        this.x,
-        this.y,
-        this.width,
-        this.height
-      );
-    } catch (e) {}
-  }
-}
+let player;
+let dir = "";
+let gameStarted = false;
+let gameOver = false;
+let score = 0;
 
 class Player {
-  constructor() {
-    this.vy = 11;
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
     this.vx = 0;
-    this.isMovingLeft = false;
-    this.isMovingRight = false;
-    this.isDead = false;
-    this.width = 55;
-    this.height = 40;
-    this.cx = 0;
-    this.cy = 0;
-    this.cwidth = 110;
-    this.cheight = 80;
-    this.dir = "left";
-    this.x = width / 2 - this.width / 2;
-    this.y = height;
+    this.vy = 0;
+    this.width = 60;
+    this.height = 60;
+    this.jumpPower = -15;
+    this.gravity = 0.5;
+    this.img = document.getElementById("playerImg");
+    this.facingLeft = false;
   }
-  draw() {
-    try {
-      if (this.dir === "right") this.cy = 121;
-      else if (this.dir === "left") this.cy = 201;
-      else if (this.dir === "right_land") this.cy = 289;
-      else if (this.dir === "left_land") this.cy = 371;
 
-      ctx.drawImage(
-        image,
-        this.cx,
-        this.cy,
-        this.cwidth,
-        this.cheight,
-        this.x,
-        this.y,
-        this.width,
-        this.height
-      );
-    } catch (e) {}
+  update() {
+    if (this.isMovingLeft) {
+      this.vx = -5;
+      this.facingLeft = true;
+    } else if (this.isMovingRight) {
+      this.vx = 5;
+      this.facingLeft = false;
+    } else {
+      this.vx = 0;
+    }
+
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravity;
+
+    if (this.x < 0) this.x = 0;
+    if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
   }
+
+  draw() {
+    ctx.save();
+
+    if (this.facingLeft) {
+      ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+      ctx.scale(-1, 1);
+      ctx.drawImage(this.img, -this.width / 2, -this.height / 2, this.width, this.height);
+    } else {
+      ctx.drawImage(this.img, this.x, this.y, this.width, this.height);
+    }
+
+    ctx.restore();
+  }
+
   jump() {
-    // Стартовый прыжок «реже» (6 → 4)
-    const baseJump = 4;
-    // Сила прыжка растёт с очками чуть быстрее
-    const extra = Math.min(score * 0.0007, 4.5); // максимум +4.5
-    this.vy = -(baseJump + extra);
-  }
-  jumpHigh() {
-    const baseHigh = 12;
-    const extraHigh = Math.min(score * 0.0009, 6.5); // максимум +6.5
-    this.vy = -(baseHigh + extraHigh);
+    this.vy = this.jumpPower;
   }
 }
 
-class Platform {
-  constructor() {
-    this.width = 70;
-    this.height = 17;
-    this.x = Math.random() * (width - this.width);
-    this.y = position;
-    position += height / platformCount;
-    this.flag = 0;
-    this.state = 0;
-    this.cx = 0;
-    this.cy = 0;
-    this.cwidth = 105;
-    this.cheight = 31;
-
-    if (score >= 5000) this.types = [2, 3, 3, 3, 4, 4, 4, 4];
-    else if (score >= 2000 && score < 5000)
-      this.types = [2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4];
-    else if (score >= 1000 && score < 2000) this.types = [2, 2, 2, 3, 3, 3, 3, 3];
-    else if (score >= 500 && score < 1000)
-      this.types = [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3];
-    else if (score >= 100 && score < 500) this.types = [1, 1, 1, 1, 2, 2];
-    else this.types = [1];
-
-    this.type = this.types[Math.floor(Math.random() * this.types.length)];
-
-    if (this.type === 3 && broken < 1) {
-      broken++;
-    } else if (this.type === 3 && broken >= 1) {
-      this.type = 1;
-      broken = 0;
-    }
-    this.vx = 1;
-  }
-  draw() {
-    try {
-      if (this.type === 1) this.cy = 0;
-      else if (this.type === 2) this.cy = 61;
-      else if (this.type === 3 && this.flag === 0) this.cy = 31;
-      else if (this.type === 3 && this.flag === 1) this.cy = 1000;
-      else if (this.type === 4 && this.state === 0) this.cy = 90;
-      else if (this.type === 4 && this.state === 1) this.cy = 1000;
-
-      ctx.drawImage(
-        image,
-        this.cx,
-        this.cy,
-        this.cwidth,
-        this.cheight,
-        this.x,
-        this.y,
-        this.width,
-        this.height
-      );
-    } catch (e) {}
-  }
-}
-
-class PlatformBrokenSub {
-  constructor() {
-    this.height = 30;
-    this.width = 70;
-    this.x = 0;
-    this.y = 0;
-    this.cx = 0;
-    this.cy = 554;
-    this.cwidth = 105;
-    this.cheight = 60;
-    this.appearance = false;
-  }
-  draw() {
-    try {
-      if (this.appearance) {
-        ctx.drawImage(
-          image,
-          this.cx,
-          this.cy,
-          this.cwidth,
-          this.cheight,
-          this.x,
-          this.y,
-          this.width,
-          this.height
-        );
-      }
-    } catch (e) {}
-  }
-}
-
-class SpringClass {
-  constructor() {
-    this.x = 0;
-    this.y = 0;
-    this.width = 26;
-    this.height = 30;
-    this.cx = 0;
-    this.cy = 0;
-    this.cwidth = 45;
-    this.cheight = 53;
-    this.state = 0;
-  }
-  draw() {
-    try {
-      if (this.state === 0) this.cy = 445;
-      else if (this.state === 1) this.cy = 501;
-      ctx.drawImage(
-        image,
-        this.cx,
-        this.cy,
-        this.cwidth,
-        this.cheight,
-        this.x,
-        this.y,
-        this.width,
-        this.height
-      );
-    } catch (e) {}
-  }
-}
-
-// Инициализация объектов до старта
-base = new Base();
-player = new Player();
-Spring = new SpringClass();
-platform_broken_substitute = new PlatformBrokenSub();
-platforms = [];
-for (let i = 0; i < platformCount; i++) {
-  platforms.push(new Platform());
-}
-
-// ==================== ФУНКЦИИ ОБНОВЛЕНИЯ ====================
-function paintCanvas() {
-  ctx.clearRect(0, 0, width, height);
-}
-
-function playerCalc() {
-  if (dir === "left") {
-    player.dir = "left";
-    if (player.vy < -7 && player.vy > -15) player.dir = "left_land";
-  } else if (dir === "right") {
-    player.dir = "right";
-    if (player.vy < -7 && player.vy > -15) player.dir = "right_land";
-  }
-
-  // Горизонтальная физика («мягче»)
-  if (player.isMovingLeft) {
-    player.x += player.vx;
-    player.vx -= 0.08;
-  } else {
-    player.x += player.vx;
-    if (player.vx < 0) player.vx += 0.05;
-  }
-  if (player.isMovingRight) {
-    player.x += player.vx;
-    player.vx += 0.08;
-  } else {
-    player.x += player.vx;
-    if (player.vx > 0) player.vx -= 0.05;
-  }
-  if (player.vx > 8) player.vx = 8;
-  else if (player.vx < -8) player.vx = -8;
-
-  // Прыжок от базы
-  if ((player.y + player.height) > base.y && base.y < height) {
-    player.jump();
-  }
-
-  // Game Over
-  if (
-    base.y > height &&
-    player.y + player.height > height &&
-    player.isDead !== "lol"
-  ) {
-    player.isDead = true;
-  }
-
-  // Сквозь стены
-  if (player.x > width) player.x = -player.width;
-  else if (player.x < -player.width) player.x = width;
-
-  // Вертикальная физика + скролл
-  if (player.y >= height / 2 - player.height / 2) {
-    player.y += player.vy;
-    player.vy += gravity;
-  } else {
-    platforms.forEach((p, i) => {
-      if (player.vy < 0) p.y -= player.vy;
-      if (p.y > height) {
-        platforms[i] = new Platform();
-        platforms[i].y = p.y - height;
-      }
-    });
-    base.y -= player.vy;
-    player.vy += gravity;
-    if (player.vy >= 0) {
-      player.y += player.vy;
-      player.vy += gravity;
-    }
-    score++;
-  }
-
-  collides();
-  if (player.isDead) gameOver();
-}
-
-function springCalc() {
-  let s = Spring;
-  let p = platforms[0];
-  if (p.type === 1 || p.type === 2) {
-    s.x = p.x + p.width / 2 - s.width / 2;
-    s.y = p.y - p.height - 10;
-    if (s.y > height / 1.1) s.state = 0;
-    s.draw();
-  } else {
-    s.x = -s.width;
-    s.y = -s.height;
-  }
-}
-
-function platformCalc() {
-  let subs = platform_broken_substitute;
-  platforms.forEach((p, i) => {
-    if (p.type === 2) {
-      if (p.x < 0 || p.x + p.width > width) p.vx *= -1;
-      p.x += p.vx;
-    }
-    if (p.flag === 1 && !subs.appearance && jumpCount === 0) {
-      subs.x = p.x;
-      subs.y = p.y;
-      subs.appearance = true;
-      jumpCount++;
-    }
-    p.draw();
-  });
-  if (subs.appearance) {
-    subs.draw();
-    subs.y += 8;
-  }
-  if (subs.y > height) subs.appearance = false;
-}
-
-function collides() {
-  platforms.forEach((p, i) => {
-    if (
-      player.vy > 0 &&
-      p.state === 0 &&
-      player.x + 15 < p.x + p.width &&
-      player.x + player.width - 15 > p.x &&
-      player.y + player.height > p.y &&
-      player.y + player.height < p.y + p.height
-    ) {
-      if (p.type === 3 && p.flag === 0) {
-        p.flag = 1;
-        jumpCount = 0;
-        return;
-      } else if (p.type === 4 && p.state === 0) {
-        player.jump();
-        p.state = 1;
-      } else if (p.flag === 1) {
-        return;
-      } else {
-        player.jump();
-      }
-    }
-  });
-
-  let s = Spring;
-  if (
-    player.vy > 0 &&
-    s.state === 0 &&
-    player.x + 15 < s.x + s.width &&
-    player.x + player.width - 15 > s.x &&
-    player.y + player.height > s.y &&
-    player.y + player.height < s.y + s.height
-  ) {
-    s.state = 1;
-    player.jumpHigh();
-  }
-}
-
-function updateScore() {
-  document.getElementById("score").innerText = score;
-}
-
-function gameOver() {
-  platforms.forEach((p) => {
-    p.y -= 12;
-  });
-  if (player.y > height / 2 && flag === 0) {
-    player.y -= 8;
-    player.vy = 0;
-  } else if (player.y < height / 2) {
-    flag = 1;
-  } else if (player.y + player.height > height) {
-    showGameOverMenu();
-    hideScore();
-    player.isDead = "lol";
-  }
-}
-
-function update() {
-  paintCanvas();
-  platformCalc();
-  springCalc();
-  playerCalc();
-  player.draw();
-  base.draw();
-  updateScore();
-}
-
-// ========== ИНИЦИАЛИЗАЦИЯ ИГРЫ ==========
 function init() {
-  jumpCount = 0;
-  position = 0;
+  player = new Player(canvas.width / 2 - 30, canvas.height - 100);
+  gameStarted = true;
+  gameOver = false;
   score = 0;
-  flag = 0;
-
-  base = new Base();
-  player = new Player();
-  Spring = new SpringClass();
-  platform_broken_substitute = new PlatformBrokenSub();
-  platforms = [];
-  for (let i = 0; i < platformCount; i++) {
-    platforms.push(new Platform());
-  }
-
-  paintCanvas();
-  animloop = function () {
-    update();
-    requestAnimationFrame(animloop);
-  };
-  animloop();
-  hideMainMenu();
-  showScore();
-}
-
-function reset() {
-  hideGameOverMenu();
-  showScore();
-  player.isDead = false;
-  flag = 0;
-  position = 0;
-  score = 0;
-  jumpCount = 0;
-
-  base = new Base();
- 	player = new Player();
- 	Spring = new SpringClass();
- 	platform_broken_substitute = new PlatformBrokenSub();
- 	platforms = [];
- 	for (let i = 0; i < platformCount; i++) {
-    platforms.push(new Platform());
- 	}
-}
-
-function hideMainMenu() {
+  document.getElementById("score").textContent = "0";
   document.getElementById("mainMenu").style.display = "none";
-}
-function showGameOverMenu() {
-  document.getElementById("gameOverMenu").style.display = "flex";
-}
-function hideGameOverMenu() {
   document.getElementById("gameOverMenu").style.display = "none";
-}
-function showScore() {
-  document.getElementById("scoreBoard").style.display = "flex";
-}
-function hideScore() {
-  document.getElementById("scoreBoard").style.display = "none";
+  animate();
 }
 
-// «Демо-цикл» до старта
-function menuLoop() {
-  update();
-  requestAnimationFrame(menuLoop);
+function endGame() {
+  gameOver = true;
+  document.getElementById("go_score").textContent = `You scored ${score} points`;
+  document.getElementById("gameOverMenu").style.display = "block";
 }
-menuLoop();
 
-// ========== ОБРАБОТЧИКИ КНОПОК ==========
+function animate() {
+  if (gameOver) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  player.update();
+  player.draw();
+  requestAnimationFrame(animate);
+}
+
+// Кнопки
 document.getElementById("btnPlay").addEventListener("click", init);
-document.getElementById("btnRestart").addEventListener("click", reset);
+document.getElementById("btnRestart").addEventListener("click", init);
 
-// ========== НЕВИДИМЫЕ ЗОНЫ УПРАВЛЕНИЯ ==========
+// Клавиатура
+window.addEventListener("keydown", (e) => {
+  if (!gameStarted) return;
+  if (e.key === "ArrowLeft") player.isMovingLeft = true;
+  if (e.key === "ArrowRight") player.isMovingRight = true;
+  if (e.key === " " || e.key === "Spacebar") player.jump();
+});
+window.addEventListener("keyup", (e) => {
+  if (e.key === "ArrowLeft") player.isMovingLeft = false;
+  if (e.key === "ArrowRight") player.isMovingRight = false;
+});
+
+// Управление касаниями и мышью
 const leftZone = document.getElementById("leftZone");
 const rightZone = document.getElementById("rightZone");
 
 leftZone.addEventListener("mousedown", () => {
-  dir = "left";
-  player.isMovingLeft = true;
+  if (player) player.isMovingLeft = true;
 });
 leftZone.addEventListener("mouseup", () => {
-  player.isMovingLeft = false;
+  if (player) player.isMovingLeft = false;
 });
 leftZone.addEventListener("mouseleave", () => {
-  player.isMovingLeft = false;
+  if (player) player.isMovingLeft = false;
 });
 leftZone.addEventListener("touchstart", (e) => {
   e.preventDefault();
-  dir = "left";
-  player.isMovingLeft = true;
+  if (player) player.isMovingLeft = true;
 });
 leftZone.addEventListener("touchend", (e) => {
   e.preventDefault();
-  player.isMovingLeft = false;
+  if (player) player.isMovingLeft = false;
 });
 
 rightZone.addEventListener("mousedown", () => {
-  dir = "right";
-  player.isMovingRight = true;
+  if (player) player.isMovingRight = true;
 });
 rightZone.addEventListener("mouseup", () => {
-  player.isMovingRight = false;
+  if (player) player.isMovingRight = false;
 });
 rightZone.addEventListener("mouseleave", () => {
-  player.isMovingRight = false;
+  if (player) player.isMovingRight = false;
 });
 rightZone.addEventListener("touchstart", (e) => {
   e.preventDefault();
-  dir = "right";
-  player.isMovingRight = true;
+  if (player) player.isMovingRight = true;
 });
 rightZone.addEventListener("touchend", (e) => {
   e.preventDefault();
-  player.isMovingRight = false;
+  if (player) player.isMovingRight = false;
 });
