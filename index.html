@@ -187,7 +187,7 @@
       border-bottom: none;
     }
   </style>
-<link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- ===== КОНТЕЙНЕР С ИГРОВОЙ СЦЕНОЙ ===== -->
@@ -257,7 +257,7 @@
         const navbarHeight =
           parseInt(
             getComputedStyle(document.documentElement)
-              .getPropertyValue("--tg-nav-bar-height")
+            .getPropertyValue("--tg-nav-bar-height")
           ) || 0;
         container.style.width = "100vw";
         container.style.height = `calc(100vh - ${navbarHeight}px)`;
@@ -297,6 +297,12 @@
         score = 0,
         jumpCount = 0;
 
+    // Добавляем новые глобальные переменные для динамического улучшения прыжков
+    let level = 0;               // текущий «уровень» улучшений
+    let nextThreshold = 1500;    // следующий рубеж для увеличения параметров
+    let baseJumpVelocity = -8;   // теперь используем переменную, а не «-8» напрямую
+    let baseSpringVelocity = -16;// теперь «-16» через переменную
+
     // ===== Класс Base (пол) =====
     class Base {
       constructor() {
@@ -326,7 +332,7 @@
         this.isMovingRight = false;
         this.isDead = false;
 
-        // Подберите эти значения (60×60 px) так, чтобы ваш персонаж не был слишком большим.
+        // Размер 60×60 px
         this.width = 60;
         this.height = 60;
 
@@ -347,23 +353,23 @@
         } catch (e) {}
       }
 
+      // Прыжок от базы (двойная высота)
       jump() {
-        this.vy = -8;    // оригинальная высота прыжка
+        this.vy = baseJumpVelocity;
       }
+      // Прыжок с пружиной (двойная высота)
       jumpHigh() {
-        this.vy = -16;   // «высокий» прыжок
+        this.vy = baseSpringVelocity;
       }
     }
 
     // ===== Класс Platform (платформа) =====
     class Platform {
       constructor() {
-        // Сделали платформу чуть шире – 100px вместо 70px
         this.width = 100;
         this.height = 17;
         this.x = Math.random() * (width - this.width);
         this.y = position;
-        // Шаг межплатформенный – height / PLATFORM_COUNT
         position += height / PLATFORM_COUNT;
         this.flag = 0;
         this.state = 0;
@@ -463,7 +469,7 @@
         if (player.vy < -7 && player.vy > -15) player.dir = "right_land";
       }
 
-      // ===== оригинальная горизонтальная физика =====
+      // ===== горизонтальная физика =====
       if (player.isMovingLeft) {
         player.x += player.vx;
         player.vx -= 0.15;
@@ -517,7 +523,19 @@
           player.y += player.vy;
           player.vy += gravity;
         }
+        // Увеличиваем счёт здесь
         score++;
+
+        // Каждый раз, когда score достигает порога, повышаем «уровень»
+        if (score >= nextThreshold) {
+          level++;
+          nextThreshold += 1500;
+
+          // При повышении уровня слегка увеличиваем силу прыжка и «время в воздухе»
+          baseJumpVelocity *= 1.05;     // +5% к базовому прыжку
+          baseSpringVelocity *= 1.05;   // +5% к прыжку с пружиной
+          gravity *= 0.98;              // немного уменьшаем гравитацию (чтобы дольше висел)
+        }
       }
 
       collides();
@@ -673,8 +691,8 @@
         isFalling = 1;
       } else if (player.y + player.height > height) {
         document.getElementById("go_score").textContent = `You scored ${score} points`;
-        hideScore();
         showGameOverMenu();
+        hideScore();
 
         let userId = null;
         if (typeof Telegram !== "undefined" && Telegram.WebApp) {
@@ -704,6 +722,11 @@
       score = 0;
       isFalling = 0;
       broken = 0;
+      level = 0;
+      nextThreshold = 1500;
+      baseJumpVelocity = -8 * 1.38;   // сбрасываем начальную двойную силу прыжка
+      baseSpringVelocity = -16 * 1.38; // сбрасываем начальную двойную силу пружины
+      gravity = 0.22;               // сбрасываем гравитацию
 
       base = new Base();
       player = new Player();
@@ -738,6 +761,11 @@
       position = height / 3;
       score = 0;
       jumpCount = 0;
+      level = 0;
+      nextThreshold = 1500;
+      baseJumpVelocity = -8 * 2;
+      baseSpringVelocity = -16 * 2;
+      gravity = 0.2;
 
       base = new Base();
       player = new Player();
